@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { BookOpenCheck, Users, User, DollarSign, PlusCircle } from "lucide-react";
+import { Users, User, DollarSign, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { Student, Teacher } from "@/lib/types";
+import { Student, Teacher, StudentLevel, PaymentStatus } from "@/lib/types";
 import { initialStudents, initialTeachers } from "@/lib/data";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
@@ -15,6 +15,8 @@ import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Secondary 1', 'Secondary 2'];
 
 export default function DashboardPage() {
   const [students, setStudents] = React.useState<Student[]>(initialStudents);
@@ -33,6 +35,10 @@ export default function DashboardPage() {
   
   const handleDeleteStudent = (studentId: string) => {
     setStudents(prev => prev.filter(s => s.id !== studentId));
+  };
+
+  const handleUpdateStudentStatus = (studentId: string, status: PaymentStatus) => {
+    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, paymentStatus: status } : s));
   };
 
   const handleAddTeacher = (teacher: Omit<Teacher, 'id'>) => {
@@ -112,11 +118,32 @@ export default function DashboardPage() {
                 <CardDescription>Manage all registered students.</CardDescription>
               </CardHeader>
               <CardContent>
-                <StudentsTable 
-                  students={students} 
-                  onUpdateStudent={handleUpdateStudent}
-                  onDeleteStudent={handleDeleteStudent}
-                />
+                <Tabs defaultValue="all" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-4">
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    {studentLevels.map((level) => (
+                      <TabsTrigger key={level} value={level}>{level}</TabsTrigger>
+                    ))}
+                  </TabsList>
+                  <TabsContent value="all">
+                    <StudentsTable 
+                      students={students} 
+                      onUpdateStudent={handleUpdateStudent}
+                      onDeleteStudent={handleDeleteStudent}
+                      onUpdateStudentStatus={handleUpdateStudentStatus}
+                    />
+                  </TabsContent>
+                  {studentLevels.map((level) => (
+                    <TabsContent key={level} value={level}>
+                      <StudentsTable 
+                        students={students.filter(s => s.level === level)} 
+                        onUpdateStudent={handleUpdateStudent}
+                        onDeleteStudent={handleDeleteStudent}
+                        onUpdateStudentStatus={handleUpdateStudentStatus}
+                      />
+                    </TabsContent>
+                  ))}
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
