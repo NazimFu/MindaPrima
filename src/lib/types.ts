@@ -1,5 +1,6 @@
 export type StudentLevel = 'Primary 1' | 'Primary 2' | 'Primary 3' | 'Secondary 1' | 'Secondary 2';
 export type PaymentStatus = 'Paid' | 'Pending' | 'Overdue';
+export type TransportArea = 'Inside Limit' | 'Outside Limit' | 'N/A';
 
 export type Student = {
   id: string;
@@ -7,9 +8,12 @@ export type Student = {
   level: StudentLevel;
   subjects: string;
   guardian: string;
+  guardianContact: string;
   address: string;
   transport: 'Yes' | 'No';
+  transportArea: TransportArea;
   paymentStatus: PaymentStatus;
+  firstTime: 'Yes' | 'No';
 };
 
 export type Teacher = {

@@ -9,21 +9,33 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Student } from "@/lib/types";
+import type { Student, TransportArea } from "@/lib/types";
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   level: z.enum(['Primary 1', 'Primary 2', 'Primary 3', 'Secondary 1', 'Secondary 2']),
   subjects: z.string().min(3, "Please list at least one subject."),
   guardian: z.string().min(2, "Guardian's name is required."),
+  guardianContact: z.string().min(10, "A valid contact number is required."),
   address: z.string().min(10, "Address is required."),
+  firstTime: z.enum(['Yes', 'No']),
   transport: z.enum(['Yes', 'No']),
-});
+  transportArea: z.enum(['Inside Limit', 'Outside Limit', 'N/A']).optional(),
+}).refine(data => {
+    if (data.transport === 'Yes') {
+      return data.transportArea && data.transportArea !== 'N/A';
+    }
+    return true;
+  }, {
+    message: "Transport area is required.",
+    path: ["transportArea"],
+  }
+);
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 type StudentFormProps = {
-  onSubmit: (data: StudentFormValues) => void;
+  onSubmit: (data: Omit<Student, 'id' | 'paymentStatus'>) => void;
   initialData?: Student;
 };
 
@@ -35,14 +47,26 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
       level: "Primary 1",
       subjects: "",
       guardian: "",
+      guardianContact: "",
       address: "",
+      firstTime: "Yes",
       transport: "No",
+      transportArea: "N/A",
     },
   });
 
+  const transportValue = form.watch("transport");
+
+  const handleFormSubmit = (values: StudentFormValues) => {
+    onSubmit({
+      ...values,
+      transportArea: values.transport === 'No' ? 'N/A' : values.transportArea as TransportArea,
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -52,6 +76,27 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
               <FormControl>
                 <Input placeholder="John Doe" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="firstTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>First Time Registration</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -103,6 +148,31 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
             )}
           />
         </div>
+
+        {transportValue === 'Yes' && (
+           <FormField
+            control={form.control}
+            name="transportArea"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Transport Area</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select area" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Inside Limit">Inside Limit</SelectItem>
+                    <SelectItem value="Outside Limit">Outside Limit</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        
         <FormField
           control={form.control}
           name="subjects"
@@ -116,19 +186,34 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="guardian"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Guardian's Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Jane Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="guardian"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Guardian's Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Jane Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="guardianContact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Guardian's Contact</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., 012-3456789" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="address"
