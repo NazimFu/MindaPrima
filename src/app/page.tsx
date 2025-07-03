@@ -1,57 +1,114 @@
 "use client";
 
 import * as React from "react";
-import { Users, User, DollarSign, PlusCircle } from "lucide-react";
+import { Users, User, DollarSign, PlusCircle, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { Student, Teacher, StudentLevel, PaymentStatus } from "@/lib/types";
-import { initialStudents, initialTeachers } from "@/lib/data";
+import { Student, Teacher, StudentLevel, PaymentStatus, HistoricalData, MonthlyData } from "@/lib/types";
+import { initialHistoricalData } from "@/lib/data";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Secondary 1', 'Secondary 2'];
 
 export default function DashboardPage() {
-  const [students, setStudents] = React.useState<Student[]>(initialStudents);
-  const [teachers, setTeachers] = React.useState<Teacher[]>(initialTeachers);
+  const { toast } = useToast();
+  const [historicalData, setHistoricalData] = React.useState<HistoricalData>(initialHistoricalData);
+  const [selectedMonth, setSelectedMonth] = React.useState<string>('current');
   const [isStudentDialogOpen, setStudentDialogOpen] = React.useState(false);
   const [isTeacherDialogOpen, setTeacherDialogOpen] = React.useState(false);
+  
+  const isReadOnly = selectedMonth !== 'current';
+  const { students, teachers } = historicalData[selectedMonth] || { students: [], teachers: [] };
 
+  const updateCurrentMonthData = (updater: (currentData: MonthlyData) => MonthlyData) => {
+    if(isReadOnly) return;
+    setHistoricalData(prev => ({
+      ...prev,
+      [selectedMonth]: updater(prev[selectedMonth]),
+    }));
+  };
+  
   const handleAddStudent = (student: Omit<Student, 'id' | 'paymentStatus'>) => {
-    setStudents(prev => [...prev, { ...student, id: `STU-${Date.now()}`, paymentStatus: 'Pending' }]);
+    updateCurrentMonthData(data => ({
+      ...data,
+      students: [...data.students, { ...student, id: `STU-${Date.now()}`, paymentStatus: 'Pending' }]
+    }));
     setStudentDialogOpen(false);
   };
 
   const handleUpdateStudent = (updatedStudent: Student) => {
-    setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+     updateCurrentMonthData(data => ({
+      ...data,
+      students: data.students.map(s => s.id === updatedStudent.id ? updatedStudent : s)
+    }));
   };
   
   const handleDeleteStudent = (studentId: string) => {
-    setStudents(prev => prev.filter(s => s.id !== studentId));
+    updateCurrentMonthData(data => ({
+      ...data,
+      students: data.students.filter(s => s.id !== studentId)
+    }));
   };
 
   const handleUpdateStudentStatus = (studentId: string, status: PaymentStatus) => {
-    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, paymentStatus: status } : s));
+    updateCurrentMonthData(data => ({
+      ...data,
+      students: data.students.map(s => s.id === studentId ? { ...s, paymentStatus: status } : s)
+    }));
   };
 
   const handleAddTeacher = (teacher: Omit<Teacher, 'id'>) => {
-    setTeachers(prev => [...prev, { ...teacher, id: `TEA-${Date.now()}` }]);
+    updateCurrentMonthData(data => ({
+      ...data,
+      teachers: [...data.teachers, { ...teacher, id: `TEA-${Date.now()}` }]
+    }));
     setTeacherDialogOpen(false);
   };
 
   const handleUpdateTeacher = (updatedTeacher: Teacher) => {
-    setTeachers(prev => prev.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
+    updateCurrentMonthData(data => ({
+      ...data,
+      teachers: data.teachers.map(t => t.id === updatedTeacher.id ? updatedTeacher : t)
+    }));
   };
 
   const handleDeleteTeacher = (teacherId: string) => {
-    setTeachers(prev => prev.filter(t => t.id !== teacherId));
+     updateCurrentMonthData(data => ({
+      ...data,
+      teachers: data.teachers.filter(t => t.id !== teacherId)
+    }));
+  };
+  
+  const handleArchive = () => {
+    const monthKey = format(new Date(), 'MMMM yyyy');
+    if (historicalData[monthKey]) {
+      toast({
+        variant: 'destructive',
+        title: 'Archive Failed',
+        description: `An archive for ${monthKey} already exists.`,
+      });
+      return;
+    }
+    setHistoricalData(prev => ({
+      ...prev,
+      [monthKey]: prev.current
+    }));
+    toast({
+      title: 'Success',
+      description: `Live data has been archived as ${monthKey}.`,
+    });
   };
 
   return (
@@ -74,9 +131,25 @@ export default function DashboardPage() {
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
             </TabsList>
             <div className="ml-auto flex items-center gap-2">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-[180px] h-8 text-sm">
+                  <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(historicalData).map(month => (
+                    <SelectItem key={month} value={month}>
+                      {month === 'current' ? 'Live Data' : month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+               <Button variant="outline" size="sm" className="h-8 gap-1" onClick={handleArchive} disabled={isReadOnly}>
+                <Archive className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Archive</span>
+              </Button>
                <Dialog open={isStudentDialogOpen} onOpenChange={setStudentDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-8 gap-1">
+                  <Button size="sm" className="h-8 gap-1" disabled={isReadOnly}>
                     <PlusCircle className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                       Add Student
@@ -92,7 +165,7 @@ export default function DashboardPage() {
               </Dialog>
                <Dialog open={isTeacherDialogOpen} onOpenChange={setTeacherDialogOpen}>
                 <DialogTrigger asChild>
-                   <Button size="sm" variant="outline" className="h-8 gap-1">
+                   <Button size="sm" variant="outline" className="h-8 gap-1" disabled={isReadOnly}>
                     <PlusCircle className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                       Add Teacher
@@ -115,7 +188,7 @@ export default function DashboardPage() {
              <Card>
               <CardHeader>
                 <CardTitle>Students</CardTitle>
-                <CardDescription>Manage all registered students.</CardDescription>
+                <CardDescription>Manage all registered students. {isReadOnly && <span className="font-semibold text-destructive">(Read-only)</span>}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="all" className="w-full">
@@ -131,6 +204,7 @@ export default function DashboardPage() {
                       onUpdateStudent={handleUpdateStudent}
                       onDeleteStudent={handleDeleteStudent}
                       onUpdateStudentStatus={handleUpdateStudentStatus}
+                      isReadOnly={isReadOnly}
                     />
                   </TabsContent>
                   {studentLevels.map((level) => (
@@ -140,6 +214,7 @@ export default function DashboardPage() {
                         onUpdateStudent={handleUpdateStudent}
                         onDeleteStudent={handleDeleteStudent}
                         onUpdateStudentStatus={handleUpdateStudentStatus}
+                        isReadOnly={isReadOnly}
                       />
                     </TabsContent>
                   ))}
@@ -151,13 +226,14 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Teachers</CardTitle>
-                <CardDescription>Manage all registered teachers.</CardDescription>
+                <CardDescription>Manage all registered teachers. {isReadOnly && <span className="font-semibold text-destructive">(Read-only)</span>}</CardDescription>
               </CardHeader>
               <CardContent>
                 <TeachersTable
                   teachers={teachers}
                   onUpdateTeacher={handleUpdateTeacher}
                   onDeleteTeacher={handleDeleteTeacher}
+                  isReadOnly={isReadOnly}
                 />
               </CardContent>
             </Card>

@@ -46,14 +46,16 @@ type StudentsTableProps = {
   onUpdateStudent: (student: Student) => void;
   onDeleteStudent: (id: string) => void;
   onUpdateStudentStatus: (id: string, status: PaymentStatus) => void;
+  isReadOnly?: boolean;
 };
 
-export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUpdateStudentStatus }: StudentsTableProps) {
+export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUpdateStudentStatus, isReadOnly = false }: StudentsTableProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(null);
 
   const handleEdit = (student: Student) => {
+    if(isReadOnly) return;
     setSelectedStudent(student);
     setEditDialogOpen(true);
   };
@@ -135,7 +137,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onSelect={() => handleEdit(student)}>
+                        <DropdownMenuItem onSelect={() => handleEdit(student)} disabled={isReadOnly}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -144,7 +146,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                           Invoice
                         </DropdownMenuItem>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
+                          <DropdownMenuSubTrigger disabled={isReadOnly}>
                             <Tags className="mr-2 h-4 w-4" />
                             <span>Update Status</span>
                           </DropdownMenuSubTrigger>
@@ -162,8 +164,8 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                          <AlertDialogTrigger asChild disabled={isReadOnly}>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600" disabled={isReadOnly}>
                                <Trash2 className="mr-2 h-4 w-4" />
                                Delete
                             </DropdownMenuItem>

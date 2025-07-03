@@ -18,3 +18,12 @@ export type Teacher = {
   subject: string;
   contact: string;
 };
+
+export type MonthlyData = {
+  students: Student[];
+  teachers: Teacher[];
+};
+
+export type HistoricalData = {
+  [month: string]: MonthlyData;
+};

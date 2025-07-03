@@ -39,14 +39,16 @@ type TeachersTableProps = {
   teachers: Teacher[];
   onUpdateTeacher: (teacher: Teacher) => void;
   onDeleteTeacher: (id: string) => void;
+  isReadOnly?: boolean;
 };
 
-export function TeachersTable({ teachers, onUpdateTeacher, onDeleteTeacher }: TeachersTableProps) {
+export function TeachersTable({ teachers, onUpdateTeacher, onDeleteTeacher, isReadOnly = false }: TeachersTableProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedTeacher, setSelectedTeacher] = React.useState<Teacher | null>(null);
 
   const handleEdit = (teacher: Teacher) => {
+    if (isReadOnly) return;
     setSelectedTeacher(teacher);
     setEditDialogOpen(true);
   };
@@ -94,13 +96,13 @@ export function TeachersTable({ teachers, onUpdateTeacher, onDeleteTeacher }: Te
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleEdit(teacher)}>
+                      <DropdownMenuItem onSelect={() => handleEdit(teacher)} disabled={isReadOnly}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                        <AlertDialogTrigger asChild disabled={isReadOnly}>
+                           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600" disabled={isReadOnly}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                           </DropdownMenuItem>

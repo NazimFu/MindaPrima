@@ -1,6 +1,6 @@
-import type { Student, Teacher } from './types';
+import type { Student, Teacher, HistoricalData } from './types';
 
-export const initialStudents: Student[] = [
+const currentStudents: Student[] = [
   {
     id: 'STU-001',
     name: 'Ali bin Abu',
@@ -53,7 +53,7 @@ export const initialStudents: Student[] = [
   },
 ];
 
-export const initialTeachers: Teacher[] = [
+const currentTeachers: Teacher[] = [
   {
     id: 'TEA-001',
     name: 'Mr. Azman',
@@ -79,3 +79,27 @@ export const initialTeachers: Teacher[] = [
     contact: '016-1122334',
   },
 ];
+
+const mayStudents: Student[] = [
+  { ...currentStudents[0] },
+  { ...currentStudents[1], paymentStatus: 'Paid' },
+  { ...currentStudents[2] },
+];
+
+const mayTeachers: Teacher[] = [
+  { ...currentTeachers[0] },
+  { ...currentTeachers[1] },
+  { ...currentTeachers[2] },
+];
+
+
+export const initialHistoricalData: HistoricalData = {
+  'current': {
+    students: currentStudents,
+    teachers: currentTeachers,
+  },
+  'May 2024': {
+    students: mayStudents,
+    teachers: mayTeachers,
+  }
+}
