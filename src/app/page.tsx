@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpenCheck, Users, User, DollarSign, BrainCircuit, PlusCircle } from "lucide-react";
+import { BookOpenCheck, Users, User, DollarSign, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,6 @@ import { Student, Teacher } from "@/lib/types";
 import { initialStudents, initialTeachers } from "@/lib/data";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
-import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
@@ -105,9 +104,6 @@ export default function DashboardPage() {
           </div>
           <TabsContent value="overview" className="space-y-4">
             <OverviewCards students={students} teachers={teachers} />
-            <div className="grid gap-4 md:grid-cols-1">
-              <SmartSuggestions />
-            </div>
           </TabsContent>
           <TabsContent value="students">
              <Card>
