@@ -194,7 +194,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="all" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-4">
+                  <TabsList className="h-auto flex-wrap justify-start bg-muted p-2 rounded-lg mb-4">
                     <TabsTrigger value="all">All</TabsTrigger>
                     {studentLevels.map((level) => (
                       <TabsTrigger key={level} value={level}>{level}</TabsTrigger>
