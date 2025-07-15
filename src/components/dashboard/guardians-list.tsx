@@ -78,11 +78,9 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
                         <Phone className="h-3 w-3" />
                         {guardianInfo.contact}
                      </span>
-                     <Link href={invoiceUrl} passHref>
-                        <a onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:underline">
-                            <Hash className="h-3 w-3" />
-                            {guardianInfo.invoiceId}
-                        </a>
+                     <Link href={invoiceUrl} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:underline">
+                        <Hash className="h-3 w-3" />
+                        {guardianInfo.invoiceId}
                      </Link>
                    </div>
                 </div>
