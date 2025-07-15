@@ -55,6 +55,9 @@ export default function InvoicePage() {
     const handleGeneratePdf = () => {
         const input = invoiceRef.current;
         if (input) {
+            const originalFont = input.style.fontFamily;
+            input.style.fontFamily = 'sans-serif'; // Use a standard font
+
             const buttons = input.querySelectorAll('button');
             buttons.forEach(btn => btn.style.display = 'none');
             const inputs = input.querySelectorAll('input, textarea, select, [role="combobox"]');
@@ -62,7 +65,6 @@ export default function InvoicePage() {
                 const element = inp as HTMLElement;
                 element.style.border = 'none';
                 if (element.tagName === 'SELECT' || element.getAttribute('role') === 'combobox') {
-                    // Find the value element and hide the arrow
                     const valueElement = element.querySelector('[data-radix-select-trigger]') as HTMLElement;
                     if(valueElement) valueElement.style.pointerEvents = 'none';
                     const arrow = element.querySelector('svg');
@@ -70,7 +72,11 @@ export default function InvoicePage() {
                 }
             });
 
-            html2canvas(input, { scale: 2 }).then(canvas => {
+            html2canvas(input, { 
+                scale: 2,
+                useCORS: true, 
+            }).then(canvas => {
+                input.style.fontFamily = originalFont; // Restore original font
                 buttons.forEach(btn => btn.style.display = '');
                 inputs.forEach(inp => {
                    const element = inp as HTMLElement;
@@ -141,7 +147,7 @@ export default function InvoicePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
             <div className="max-w-4xl mx-auto">
                 <div className="mb-4 flex justify-between items-center">
                     <Button variant="outline" asChild>
@@ -155,7 +161,7 @@ export default function InvoicePage() {
                         Generate PDF
                     </Button>
                 </div>
-                <div ref={invoiceRef} className="bg-white p-8 sm:p-12 shadow-lg">
+                <div ref={invoiceRef} className="bg-white p-8 sm:p-12 shadow-lg font-sans">
                     <header className="border-b-4 border-blue-800 pb-4 mb-8 flex justify-between items-start">
                         <div>
                             <h1 className="text-3xl font-bold text-blue-800">Minda Prima</h1>
