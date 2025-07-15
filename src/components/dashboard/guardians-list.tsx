@@ -61,6 +61,7 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
         const guardianInfo = groupedByGuardian[guardianName];
         const invoiceUrl = `/invoice/${guardianInfo.invoiceId}?data=${encodeURIComponent(JSON.stringify({
           guardianName,
+          month: selectedMonth,
           ...guardianInfo
         }))}`;
         
