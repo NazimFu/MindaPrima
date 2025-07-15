@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import type { Student } from "@/lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,6 +17,7 @@ type GuardianGroup = {
     contact: string;
     children: Student[];
     invoiceId: string;
+    address: string;
   };
 };
 
@@ -35,6 +37,7 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
           contact: student.guardianContact,
           children: [],
           invoiceId: invoiceId,
+          address: student.address,
         };
       }
       acc[guardianName].children.push(student);
@@ -56,6 +59,11 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
     <Accordion type="multiple" className="w-full">
       {guardians.map((guardianName) => {
         const guardianInfo = groupedByGuardian[guardianName];
+        const invoiceUrl = `/invoice/${guardianInfo.invoiceId}?data=${encodeURIComponent(JSON.stringify({
+          guardianName,
+          ...guardianInfo
+        }))}`;
+        
         return (
           <AccordionItem value={guardianName} key={guardianName}>
             <AccordionTrigger>
@@ -70,10 +78,12 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
                         <Phone className="h-3 w-3" />
                         {guardianInfo.contact}
                      </span>
-                     <span className="flex items-center gap-1.5">
-                        <Hash className="h-3 w-3" />
-                        {guardianInfo.invoiceId}
-                     </span>
+                     <Link href={invoiceUrl} passHref>
+                        <a onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:underline">
+                            <Hash className="h-3 w-3" />
+                            {guardianInfo.invoiceId}
+                        </a>
+                     </Link>
                    </div>
                 </div>
               </div>
