@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Users, User, DollarSign, PlusCircle, Archive } from "lucide-react";
+import { Users, User, DollarSign, PlusCircle, Archive, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { Student, Teacher, StudentLevel, PaymentStatus, HistoricalData, MonthlyD
 import { initialHistoricalData } from "@/lib/data";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
+import { GuardiansList } from "@/components/dashboard/guardians-list";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
@@ -129,6 +130,7 @@ export default function DashboardPage() {
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
+              <TabsTrigger value="guardians">Guardians</TabsTrigger>
             </TabsList>
             <div className="ml-auto flex items-center gap-2">
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -235,6 +237,19 @@ export default function DashboardPage() {
                   onDeleteTeacher={handleDeleteTeacher}
                   isReadOnly={isReadOnly}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="guardians">
+            <Card>
+              <CardHeader>
+                <CardTitle>Guardians</CardTitle>
+                <CardDescription>
+                  List of all guardians and their registered children. {isReadOnly && <span className="font-semibold text-destructive">(Read-only)</span>}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GuardiansList students={students} />
               </CardContent>
             </Card>
           </TabsContent>
