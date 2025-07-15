@@ -132,9 +132,9 @@ export default function DashboardPage() {
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="guardians">Guardians</TabsTrigger>
             </TabsList>
-            <div className="ml-auto flex items-center gap-2 ml-4">
+            <div className="ml-auto flex items-center gap-2">
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectTrigger className="w-[150px] h-8 text-sm">
                   <SelectValue placeholder="Select Month" />
                 </SelectTrigger>
                 <SelectContent>
