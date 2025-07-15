@@ -13,7 +13,7 @@ import type { Student, TransportArea } from "@/lib/types";
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  level: z.enum(['Primary 1', 'Primary 2', 'Primary 3', 'Secondary 1', 'Secondary 2']),
+  level: z.enum(['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6']),
   subjects: z.string().min(3, "Please list at least one subject."),
   guardian: z.string().min(2, "Guardian's name is required."),
   guardianContact: z.string().min(10, "A valid contact number is required."),
@@ -118,8 +118,14 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
                     <SelectItem value="Primary 1">Primary 1</SelectItem>
                     <SelectItem value="Primary 2">Primary 2</SelectItem>
                     <SelectItem value="Primary 3">Primary 3</SelectItem>
+                    <SelectItem value="Primary 4">Primary 4</SelectItem>
+                    <SelectItem value="Primary 5">Primary 5</SelectItem>
+                    <SelectItem value="Primary 6">Primary 6</SelectItem>
                     <SelectItem value="Secondary 1">Secondary 1</SelectItem>
                     <SelectItem value="Secondary 2">Secondary 2</SelectItem>
+                    <SelectItem value="Secondary 3">Secondary 3</SelectItem>
+                    <SelectItem value="Secondary 5">Secondary 5</SelectItem>
+                    <SelectItem value="Secondary 6">Secondary 6</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
