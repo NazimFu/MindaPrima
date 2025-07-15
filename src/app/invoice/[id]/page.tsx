@@ -70,7 +70,8 @@ export default function InvoicePage() {
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 value = (el as HTMLInputElement | HTMLTextAreaElement).value;
             } else if (el.dataset.radixSelectTrigger) {
-                const valueEl = el.querySelector<HTMLElement>('[data-radix-select-value]');
+                // For ShadCN Select, the value is inside a span within the trigger button
+                const valueEl = el.querySelector<HTMLSpanElement>('span');
                 if (valueEl) value = valueEl.innerText;
             }
             
@@ -84,7 +85,8 @@ export default function InvoicePage() {
             }
 
             el.style.display = 'none';
-            el.parentElement?.insertBefore(replacement, el);
+            // Insert after the original element to maintain layout flow if needed
+            el.parentElement?.insertBefore(replacement, el.nextSibling);
             replacements.push({ original: el, replacement });
         });
 
@@ -117,7 +119,8 @@ export default function InvoicePage() {
     
     const subtotal = invoiceData.children.reduce((acc: number, student: Student) => acc + getPrice(student), 0);
     const flexibleTotal = flexibleFees.reduce((acc, fee) => {
-        return fee.type === 'Addition' ? acc + fee.amount : acc - fee.amount;
+        const feeAmount = fee.amount || 0;
+        return fee.type === 'Addition' ? acc + feeAmount : acc - feeAmount;
     }, 0);
     const grandTotal = subtotal + flexibleTotal - discount;
     
@@ -296,7 +299,7 @@ export default function InvoicePage() {
                             </tbody>
                         </table>
                         <div className="mt-2 flex justify-end">
-                            <Button variant="outline" size="sm" onClick={addFlexibleFeeRow}>
+                            <Button variant="outline" size="sm" onClick={addFlexibleFeeRow} data-pdf-hide="true">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Add Row
                             </Button>
