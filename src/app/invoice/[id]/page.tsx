@@ -58,37 +58,65 @@ export default function InvoicePage() {
             const originalFont = input.style.fontFamily;
             input.style.fontFamily = 'sans-serif'; // Use a standard font
 
-            const buttons = input.querySelectorAll('button');
-            buttons.forEach(btn => btn.style.display = 'none');
-            const inputs = input.querySelectorAll('input, textarea, select, [role="combobox"]');
-             inputs.forEach(inp => {
-                const element = inp as HTMLElement;
+            // Hide all interactive elements before capture
+            const interactiveElements = input.querySelectorAll('button, input, textarea, select, [role="combobox"]');
+            const originalStyles: { element: HTMLElement; display: string, border: string }[] = [];
+
+            interactiveElements.forEach(el => {
+                const element = el as HTMLElement;
+                originalStyles.push({ element, display: element.style.display, border: element.style.border });
                 element.style.border = 'none';
-                if (element.tagName === 'SELECT' || element.getAttribute('role') === 'combobox') {
-                    const valueElement = element.querySelector('[data-radix-select-trigger]') as HTMLElement;
-                    if(valueElement) valueElement.style.pointerEvents = 'none';
-                    const arrow = element.querySelector('svg');
-                    if(arrow) arrow.style.display = 'none';
+                
+                if (element.tagName !== 'BUTTON') {
+                    element.style.backgroundColor = 'transparent';
+                    element.style.webkitAppearance = 'none';
+                    element.style.mozAppearance = 'none';
+                    element.style.appearance = 'none';
                 }
             });
+            
+            const buttons = input.querySelectorAll('button');
+            buttons.forEach(btn => btn.style.display = 'none');
+            
+            const selects = input.querySelectorAll('select');
+            selects.forEach(sel => {
+                const trigger = sel.previousElementSibling as HTMLElement;
+                if (trigger && trigger.hasAttribute('data-radix-select-trigger')) {
+                    const arrow = trigger.querySelector('svg');
+                    if(arrow) (arrow as HTMLElement).style.display = 'none';
+                }
+            });
+
 
             html2canvas(input, { 
                 scale: 2,
                 useCORS: true, 
             }).then(canvas => {
-                input.style.fontFamily = originalFont; // Restore original font
+                // Restore original styles
+                input.style.fontFamily = originalFont;
+                originalStyles.forEach(style => {
+                    style.element.style.display = style.display;
+                    style.element.style.border = style.border;
+                });
                 buttons.forEach(btn => btn.style.display = '');
-                inputs.forEach(inp => {
-                   const element = inp as HTMLElement;
-                   element.style.border = '';
-                   if (element.tagName === 'SELECT' || element.getAttribute('role') === 'combobox') {
-                        const valueElement = element.querySelector('[data-radix-select-trigger]') as HTMLElement;
-                        if(valueElement) valueElement.style.pointerEvents = '';
-                        const arrow = element.querySelector('svg');
-                        if(arrow) arrow.style.display = '';
-                   }
+
+                selects.forEach(sel => {
+                    const trigger = sel.previousElementSibling as HTMLElement;
+                    if (trigger && trigger.hasAttribute('data-radix-select-trigger')) {
+                        const arrow = trigger.querySelector('svg');
+                        if(arrow) (arrow as HTMLElement).style.display = '';
+                    }
                 });
 
+                interactiveElements.forEach(el => {
+                    const element = el as HTMLElement;
+                    if (element.tagName !== 'BUTTON') {
+                       element.style.backgroundColor = '';
+                       element.style.webkitAppearance = '';
+                       element.style.mozAppearance = '';
+                       element.style.appearance = '';
+                    }
+                });
 
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
