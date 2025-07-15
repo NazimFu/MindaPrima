@@ -4,33 +4,43 @@ import * as React from "react";
 import type { Student } from "@/lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Phone, User, BookOpen } from "lucide-react";
+import { Phone, User, BookOpen, Hash } from "lucide-react";
 
 type GuardiansListProps = {
   students: Student[];
+  selectedMonth: string;
 };
 
 type GuardianGroup = {
   [key: string]: {
     contact: string;
     children: Student[];
+    invoiceId: string;
   };
 };
 
-export function GuardiansList({ students }: GuardiansListProps) {
+export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
   const groupedByGuardian = React.useMemo(() => {
+    const monthPrefix = selectedMonth === 'current' ? 
+      new Date().toLocaleString('default', { month: 'short' }).toUpperCase() :
+      selectedMonth.substring(0, 3).toUpperCase();
+      
+    let guardianIndex = 0;
     return students.reduce<GuardianGroup>((acc, student) => {
       const guardianName = student.guardian;
       if (!acc[guardianName]) {
+        guardianIndex++;
+        const invoiceId = `${monthPrefix}${String(guardianIndex).padStart(4, '0')}`;
         acc[guardianName] = {
           contact: student.guardianContact,
           children: [],
+          invoiceId: invoiceId,
         };
       }
       acc[guardianName].children.push(student);
       return acc;
     }, {});
-  }, [students]);
+  }, [students, selectedMonth]);
 
   const guardians = Object.keys(groupedByGuardian);
 
@@ -55,10 +65,16 @@ export function GuardiansList({ students }: GuardiansListProps) {
                 </Avatar>
                 <div className="text-left">
                   <p className="font-semibold">{guardianName}</p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Phone className="h-3 w-3" />
-                    {guardianInfo.contact}
-                  </p>
+                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                     <span className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" />
+                        {guardianInfo.contact}
+                     </span>
+                     <span className="flex items-center gap-1.5">
+                        <Hash className="h-3 w-3" />
+                        {guardianInfo.invoiceId}
+                     </span>
+                   </div>
                 </div>
               </div>
             </AccordionTrigger>

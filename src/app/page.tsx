@@ -249,7 +249,7 @@ export default function DashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <GuardiansList students={students} />
+                <GuardiansList students={students} selectedMonth={selectedMonth}/>
               </CardContent>
             </Card>
           </TabsContent>
