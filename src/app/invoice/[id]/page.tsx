@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Student } from '@/lib/types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { ArrowLeft, FileDown, Pencil } from 'lucide-react';
+import { ArrowLeft, FileDown, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getPrice = (student: Student) => {
     let price = 40; // Base price from image
@@ -20,13 +21,21 @@ const getPrice = (student: Student) => {
     return price;
 }
 
+type FlexibleFee = {
+    description: string;
+    details: string;
+    type: 'Addition' | 'Deduction';
+    amount: number;
+};
+
+
 export default function InvoicePage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const invoiceRef = React.useRef<HTMLDivElement>(null);
     
     const [invoiceData, setInvoiceData] = React.useState<any>(null);
-    const [flexibleFees, setFlexibleFees] = React.useState([
+    const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([
         { description: 'Personal Tuition', details: '1 Person', type: 'Addition', amount: 0 },
         { description: 'Worksheet', details: 'Once a year (3P)', type: 'Addition', amount: 0 },
         { description: 'Transport', details: 'Deduct 3 days', type: 'Deduction', amount: 0 },
@@ -48,12 +57,32 @@ export default function InvoicePage() {
         if (input) {
             const buttons = input.querySelectorAll('button');
             buttons.forEach(btn => btn.style.display = 'none');
-            const inputs = input.querySelectorAll('input, textarea');
-            inputs.forEach(inp => (inp as HTMLElement).style.border = 'none');
+            const inputs = input.querySelectorAll('input, textarea, select, [role="combobox"]');
+             inputs.forEach(inp => {
+                const element = inp as HTMLElement;
+                element.style.border = 'none';
+                if (element.tagName === 'SELECT' || element.getAttribute('role') === 'combobox') {
+                    // Find the value element and hide the arrow
+                    const valueElement = element.querySelector('[data-radix-select-trigger]') as HTMLElement;
+                    if(valueElement) valueElement.style.pointerEvents = 'none';
+                    const arrow = element.querySelector('svg');
+                    if(arrow) arrow.style.display = 'none';
+                }
+            });
 
             html2canvas(input, { scale: 2 }).then(canvas => {
                 buttons.forEach(btn => btn.style.display = '');
-                inputs.forEach(inp => (inp as HTMLElement).style.border = '');
+                inputs.forEach(inp => {
+                   const element = inp as HTMLElement;
+                   element.style.border = '';
+                   if (element.tagName === 'SELECT' || element.getAttribute('role') === 'combobox') {
+                        const valueElement = element.querySelector('[data-radix-select-trigger]') as HTMLElement;
+                        if(valueElement) valueElement.style.pointerEvents = '';
+                        const arrow = element.querySelector('svg');
+                        if(arrow) arrow.style.display = '';
+                   }
+                });
+
 
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
@@ -78,12 +107,30 @@ export default function InvoicePage() {
         return fee.type === 'Addition' ? acc + fee.amount : acc - fee.amount;
     }, 0);
     const grandTotal = subtotal + flexibleTotal - discount;
-
-    const handleFlexibleFeeChange = (index: number, value: string) => {
+    
+    const handleFlexibleFeeChange = (index: number, field: keyof FlexibleFee, value: string | number) => {
         const newFees = [...flexibleFees];
-        newFees[index].amount = parseFloat(value) || 0;
+        const fee = { ...newFees[index] };
+    
+        if (field === 'amount') {
+            fee[field] = parseFloat(value as string) || 0;
+        } else {
+            fee[field] = value as any;
+        }
+    
+        newFees[index] = fee;
         setFlexibleFees(newFees);
-    }
+    };
+
+    const addFlexibleFeeRow = () => {
+        setFlexibleFees([...flexibleFees, { description: '', details: '', type: 'Addition', amount: 0 }]);
+    };
+
+    const removeFlexibleFeeRow = (index: number) => {
+        const newFees = flexibleFees.filter((_, i) => i !== index);
+        setFlexibleFees(newFees);
+    };
+
 
     const getInvoiceMonth = () => {
         if (!invoiceData || !invoiceData.month) return '';
@@ -171,33 +218,72 @@ export default function InvoicePage() {
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="bg-blue-800 text-white">
-                                    <th className="p-2 font-bold rounded-tl-md">Flexible fees</th>
-                                    <th className="p-2 font-bold"></th>
-                                    <th className="p-2 font-bold"></th>
-                                    <th className="p-2 font-bold text-right rounded-tr-md"></th>
+                                    <th className="p-2 font-bold rounded-tl-md w-1/3">Flexible fees</th>
+                                    <th className="p-2 font-bold w-1/3">Details</th>
+                                    <th className="p-2 font-bold">Type</th>
+                                    <th className="p-2 font-bold text-right rounded-tr-md">Amount</th>
+                                    <th className="p-2 w-12"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {flexibleFees.map((fee, index) => (
                                 <tr key={index} className="border-b border-gray-200 bg-gray-50">
-                                    <td className="p-2">{fee.description}</td>
-                                    <td className="p-2">{fee.details}</td>
-                                    <td className="p-2">{fee.type}</td>
+                                    <td className="p-2">
+                                        <Input
+                                            type="text"
+                                            value={fee.description}
+                                            onChange={(e) => handleFlexibleFeeChange(index, 'description', e.target.value)}
+                                            className="h-8 border-gray-300 rounded"
+                                        />
+                                    </td>
+                                    <td className="p-2">
+                                        <Input
+                                            type="text"
+                                            value={fee.details}
+                                            onChange={(e) => handleFlexibleFeeChange(index, 'details', e.target.value)}
+                                            className="h-8 border-gray-300 rounded"
+                                        />
+                                    </td>
+                                    <td className="p-2">
+                                        <Select
+                                            value={fee.type}
+                                            onValueChange={(value: 'Addition' | 'Deduction') => handleFlexibleFeeChange(index, 'type', value)}
+                                        >
+                                            <SelectTrigger className="h-8 border-gray-300 rounded">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Addition">Addition</SelectItem>
+                                                <SelectItem value="Deduction">Deduction</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </td>
                                     <td className="p-2 text-right">
                                         <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2">RM</span>
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">RM</span>
                                             <Input 
                                                 type="number" 
                                                 value={fee.amount}
-                                                onChange={(e) => handleFlexibleFeeChange(index, e.target.value)}
+                                                onChange={(e) => handleFlexibleFeeChange(index, 'amount', e.target.value)}
                                                 className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded" 
                                             />
                                         </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeFlexibleFeeRow(index)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </td>
                                 </tr>
                                 ))}
                             </tbody>
                         </table>
+                        <div className="mt-2 flex justify-end">
+                            <Button variant="outline" size="sm" onClick={addFlexibleFeeRow}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Row
+                            </Button>
+                        </div>
                     </section>
                     
                     <section className="mb-8 flex justify-between">
@@ -214,10 +300,14 @@ export default function InvoicePage() {
                                 <span>Subtotal</span>
                                 <span className="font-bold">RM{subtotal.toFixed(2)}</span>
                             </div>
+                             <div className="flex justify-between py-1">
+                                <span>Flexible Fees</span>
+                                <span className="font-bold">RM{flexibleTotal.toFixed(2)}</span>
+                            </div>
                             <div className="flex justify-between py-1">
                                 <span>Discount</span>
                                 <div className="relative">
-                                     <span className="absolute left-2 top-1/2 -translate-y-1/2">RM</span>
+                                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">RM</span>
                                     <Input 
                                         type="number" 
                                         value={discount} 
@@ -227,20 +317,20 @@ export default function InvoicePage() {
                                 </div>
                             </div>
                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
+                                <span className="text-xl font-bold">Grand Total</span>
                                 <span className="text-2xl font-bold text-pink-600">RM{grandTotal.toFixed(2)}</span>
                             </div>
                         </div>
                     </section>
 
-                    <footer className="text-sm">
+                    <footer className="text-sm text-center pt-4 border-t mt-8">
                         <p className="font-bold">Additional Details</p>
                         <p>Bank Details: Bank: Maybank Islamic. Account Number: xxxxx-xxxxxx.</p>
                         <p>VAT Registration Number: 100000000. Company Number: 98765432</p>
+                         <p className="mt-4 font-semibold text-blue-800">Thank you for your business!</p>
                     </footer>
                 </div>
             </div>
         </div>
     );
 }
-
-    
