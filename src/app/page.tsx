@@ -134,7 +134,7 @@ export default function DashboardPage() {
             </TabsList>
             <div className="ml-auto flex items-center gap-2">
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[140px] h-8 text-sm">
+                <SelectTrigger className="w-[120px] h-8 text-sm">
                   <SelectValue placeholder="Select Month" />
                 </SelectTrigger>
                 <SelectContent>
