@@ -119,8 +119,7 @@ export default function InvoicePage() {
     
     const subtotal = invoiceData.children.reduce((acc: number, student: Student) => acc + getPrice(student), 0);
     const flexibleTotal = flexibleFees.reduce((acc, fee) => {
-        const feeAmount = fee.amount || 0;
-        return fee.type === 'Addition' ? acc + feeAmount : acc - feeAmount;
+        return acc + (fee.amount || 0);
     }, 0);
     const grandTotal = subtotal + flexibleTotal - discount;
     
