@@ -123,8 +123,8 @@ export default function DashboardPage() {
             </Avatar>
         </div>
       </header>
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 overflow-auto">
-        <Tabs defaultValue="overview">
+      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 overflow-y-scroll">
+        <Tabs defaultValue="overview" className="pr-1">
           <div className="flex items-center">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
