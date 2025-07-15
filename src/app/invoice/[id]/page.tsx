@@ -85,6 +85,14 @@ export default function InvoicePage() {
         setFlexibleFees(newFees);
     }
 
+    const getInvoiceMonth = () => {
+        if (!invoiceData || !invoiceData.month) return '';
+        if (invoiceData.month === 'current') {
+            return new Date().toLocaleString('default', { month: 'long' });
+        }
+        return invoiceData.month.split(' ')[0];
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
             <div className="max-w-4xl mx-auto">
@@ -115,7 +123,7 @@ export default function InvoicePage() {
                     </header>
 
                     <section className="mb-8">
-                        <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice [{invoiceData.month === 'current' ? new Date().toLocaleString('default', { month: 'long' }) : invoiceData.month.split(' ')[0]}]</h2>
+                        <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice [{getInvoiceMonth()}]</h2>
                         <div className="flex justify-between text-sm">
                             <div>
                                 <p><span className="font-semibold">Invoice #</span> {params.id}</p>
@@ -234,3 +242,5 @@ export default function InvoicePage() {
         </div>
     );
 }
+
+    
