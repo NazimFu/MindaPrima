@@ -54,78 +54,57 @@ export default function InvoicePage() {
 
     const handleGeneratePdf = () => {
         const input = invoiceRef.current;
-        if (input) {
-            const originalFont = input.style.fontFamily;
-            input.style.fontFamily = 'sans-serif'; // Use a standard font
+        if (!input) return;
 
-            // Hide all interactive elements before capture
-            const interactiveElements = input.querySelectorAll('button, input, textarea, select, [role="combobox"]');
-            const originalStyles: { element: HTMLElement; display: string, border: string }[] = [];
+        const originalFont = input.style.fontFamily;
+        input.style.fontFamily = 'sans-serif';
 
-            interactiveElements.forEach(el => {
-                const element = el as HTMLElement;
-                originalStyles.push({ element, display: element.style.display, border: element.style.border });
-                element.style.border = 'none';
-                
-                if (element.tagName !== 'BUTTON') {
-                    element.style.backgroundColor = 'transparent';
-                    element.style.webkitAppearance = 'none';
-                    element.style.mozAppearance = 'none';
-                    element.style.appearance = 'none';
-                }
-            });
+        const elementsToHide = input.querySelectorAll('button, [data-pdf-hide]');
+        elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
+
+        const interactiveElements = Array.from(input.querySelectorAll<HTMLElement>('[data-pdf-interactive]'));
+        const replacements: { original: HTMLElement; replacement: HTMLSpanElement }[] = [];
+
+        interactiveElements.forEach(el => {
+            let value = '';
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                value = (el as HTMLInputElement | HTMLTextAreaElement).value;
+            } else if (el.dataset.radixSelectTrigger) {
+                const valueEl = el.querySelector<HTMLElement>('[data-radix-select-value]');
+                if (valueEl) value = valueEl.innerText;
+            }
             
-            const buttons = input.querySelectorAll('button');
-            buttons.forEach(btn => btn.style.display = 'none');
-            
-            const selects = input.querySelectorAll('select');
-            selects.forEach(sel => {
-                const trigger = sel.previousElementSibling as HTMLElement;
-                if (trigger && trigger.hasAttribute('data-radix-select-trigger')) {
-                    const arrow = trigger.querySelector('svg');
-                    if(arrow) (arrow as HTMLElement).style.display = 'none';
-                }
-            });
+            const replacement = document.createElement('span');
+            replacement.className = el.dataset.pdfReplacementClass || '';
 
+            if (el.dataset.pdfPrefix) {
+                replacement.textContent = `${el.dataset.pdfPrefix}${value}`;
+            } else {
+                replacement.textContent = value;
+            }
 
-            html2canvas(input, { 
-                scale: 2,
-                useCORS: true, 
-            }).then(canvas => {
-                // Restore original styles
-                input.style.fontFamily = originalFont;
-                originalStyles.forEach(style => {
-                    style.element.style.display = style.display;
-                    style.element.style.border = style.border;
-                });
-                buttons.forEach(btn => btn.style.display = '');
+            el.style.display = 'none';
+            el.parentElement?.insertBefore(replacement, el);
+            replacements.push({ original: el, replacement });
+        });
 
-                selects.forEach(sel => {
-                    const trigger = sel.previousElementSibling as HTMLElement;
-                    if (trigger && trigger.hasAttribute('data-radix-select-trigger')) {
-                        const arrow = trigger.querySelector('svg');
-                        if(arrow) (arrow as HTMLElement).style.display = '';
-                    }
-                });
-
-                interactiveElements.forEach(el => {
-                    const element = el as HTMLElement;
-                    if (element.tagName !== 'BUTTON') {
-                       element.style.backgroundColor = '';
-                       element.style.webkitAppearance = '';
-                       element.style.mozAppearance = '';
-                       element.style.appearance = '';
-                    }
-                });
-
+        html2canvas(input, { scale: 2, useCORS: true })
+            .then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 pdf.save(`invoice-${params.id}.pdf`);
+            })
+            .finally(() => {
+                input.style.fontFamily = originalFont;
+                elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
+                replacements.forEach(({ original, replacement }) => {
+                    original.style.display = '';
+                    replacement.remove();
+                });
             });
-        }
     };
     
     if (!invoiceData) {
@@ -256,7 +235,7 @@ export default function InvoicePage() {
                                     <th className="p-2 font-bold w-1/3">Details</th>
                                     <th className="p-2 font-bold">Type</th>
                                     <th className="p-2 font-bold text-right rounded-tr-md">Amount</th>
-                                    <th className="p-2 w-12"></th>
+                                    <th className="p-2 w-12" data-pdf-hide="true"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -268,6 +247,7 @@ export default function InvoicePage() {
                                             value={fee.description}
                                             onChange={(e) => handleFlexibleFeeChange(index, 'description', e.target.value)}
                                             className="h-8 border-gray-300 rounded"
+                                            data-pdf-interactive="true"
                                         />
                                     </td>
                                     <td className="p-2">
@@ -276,6 +256,7 @@ export default function InvoicePage() {
                                             value={fee.details}
                                             onChange={(e) => handleFlexibleFeeChange(index, 'details', e.target.value)}
                                             className="h-8 border-gray-300 rounded"
+                                            data-pdf-interactive="true"
                                         />
                                     </td>
                                     <td className="p-2">
@@ -283,7 +264,7 @@ export default function InvoicePage() {
                                             value={fee.type}
                                             onValueChange={(value: 'Addition' | 'Deduction') => handleFlexibleFeeChange(index, 'type', value)}
                                         >
-                                            <SelectTrigger className="h-8 border-gray-300 rounded">
+                                            <SelectTrigger className="h-8 border-gray-300 rounded" data-pdf-interactive="true" data-radix-select-trigger="true">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -294,16 +275,18 @@ export default function InvoicePage() {
                                     </td>
                                     <td className="p-2 text-right">
                                         <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">RM</span>
-                                            <Input 
+                                             <Input 
                                                 type="number" 
                                                 value={fee.amount}
                                                 onChange={(e) => handleFlexibleFeeChange(index, 'amount', e.target.value)}
-                                                className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded" 
+                                                className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded"
+                                                data-pdf-interactive="true"
+                                                data-pdf-prefix="RM"
+                                                data-pdf-replacement-class="w-28 text-right"
                                             />
                                         </div>
                                     </td>
-                                    <td className="p-2 text-center">
+                                    <td className="p-2 text-center" data-pdf-hide="true">
                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeFlexibleFeeRow(index)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -327,6 +310,8 @@ export default function InvoicePage() {
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 className="text-sm w-80 h-24 border-gray-300 rounded"
+                                data-pdf-interactive="true"
+                                data-pdf-replacement-class="text-sm w-80 whitespace-pre-wrap"
                             />
                         </div>
                         <div className="w-1/3 text-sm">
@@ -338,17 +323,17 @@ export default function InvoicePage() {
                                 <span>Flexible Fees</span>
                                 <span className="font-bold">RM{flexibleTotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between py-1">
+                            <div className="flex justify-between py-1 items-center">
                                 <span>Discount</span>
-                                <div className="relative">
-                                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">RM</span>
-                                    <Input 
-                                        type="number" 
-                                        value={discount} 
-                                        onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
-                                        className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded" 
-                                    />
-                                </div>
+                                 <Input 
+                                    type="number" 
+                                    value={discount} 
+                                    onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
+                                    className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded" 
+                                    data-pdf-interactive="true"
+                                    data-pdf-prefix="RM"
+                                    data-pdf-replacement-class="w-28 text-right font-bold"
+                                />
                             </div>
                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
                                 <span className="text-xl font-bold">Grand Total</span>
