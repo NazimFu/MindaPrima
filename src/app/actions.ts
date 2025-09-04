@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addRow, updateRow, deleteRow, getSheet, getSheetData } from '@/lib/sheets';
+import { addRow, updateRow, deleteRow, getSheet, getSheetData, findRowIndex } from '@/lib/sheets';
 import type { Student, Teacher, PaymentStatus, Prices, StudentLevel } from '@/lib/types';
 import { z } from 'zod';
 
@@ -120,7 +120,7 @@ export async function getPrices(): Promise<Prices> {
                 prices[level][numSubjects] = price;
             }
         });
-        return prices as Prices;
+        return { ...defaultPrices, ...prices } as Prices;
 
     } catch (error) {
         console.error("Error fetching prices:", error);
@@ -129,7 +129,7 @@ export async function getPrices(): Promise<Prices> {
 }
 
 export async function updatePrices(prices: Prices) {
-    const rows: (string|number)[][] = [['item', 'price']];
+    const rows: (string|number)[][] = [];
     for (const [key, value] of Object.entries(prices)) {
         if (typeof value === 'object' && value !== null) {
             const levelKey = key as StudentLevel;
@@ -142,9 +142,16 @@ export async function updatePrices(prices: Prices) {
         }
     }
 
-    for (const row of rows.slice(1)) { // Skip header
+    for (const row of rows) {
         const [item, price] = row;
-        await updateRow(PRICES_SHEET_NAME, 'item', item as string, [item, price]);
+        const itemString = item as string;
+        const rowIndex = await findRowIndex(PRICES_SHEET_NAME, 'item', itemString);
+        
+        if (rowIndex > -1) {
+            await updateRow(PRICES_SHEET_NAME, 'item', itemString, [item, price]);
+        } else {
+            await addRow(PRICES_SHEET_NAME, [item, price]);
+        }
     }
 
     revalidate();

@@ -61,38 +61,48 @@ export async function getSheetData(sheet: sheets_v4.Schema$Sheet) {
         auth,
         range,
     });
+    
     // For Prices sheet, return the header. For others, skip it.
     if (range === PRICES_SHEET_NAME) {
          return response.data.values || [];
     }
-    return response.data.values?.slice(1) || []; // Skip header row
+    return response.data.values?.slice(1) || []; // Skip header row for other sheets
 }
 
-async function findRowIndex(sheetName: string, key: string, value: string): Promise<number> {
+export async function findRowIndex(sheetName: string, key: string, value: string): Promise<number> {
     const sheet = await getSheet(sheetName);
     if (!sheet) return -1;
 
-    const data = await getSheetData(sheet);
+    let data;
     let header;
-    if (sheetName === STUDENT_SHEET_NAME) {
-        header = STUDENT_HEADER;
-    } else if (sheetName === TEACHER_SHEET_NAME) {
-        header = TEACHER_HEADER;
-    } else if (sheetName === PRICES_SHEET_NAME) {
-        header = PRICES_HEADER;
-    } else {
-        return -1;
-    }
 
+    const { spreadsheetId, auth } = await getSpreadsheet();
+    const range = sheet.properties.title;
+    const response = await sheets.spreadsheets.values.get({ spreadsheetId, auth, range });
+    const allData = response.data.values || [];
+
+    if (sheetName === PRICES_SHEET_NAME) {
+        header = PRICES_HEADER;
+        data = allData;
+    } else {
+        if (sheetName === STUDENT_SHEET_NAME) header = STUDENT_HEADER;
+        if (sheetName === TEACHER_SHEET_NAME) header = TEACHER_HEADER;
+        data = allData.slice(1);
+    }
+    
+    if (!header) return -1;
+    
     const colIndex = header.indexOf(key);
     if (colIndex === -1) return -1;
     
     const rowIndex = data.findIndex(row => row[colIndex] === value);
-
+    
     if (sheetName === PRICES_SHEET_NAME) {
-        return rowIndex !== -1 ? rowIndex + 1 : -1; // 1-based index, includes header
+        // For prices, rowIndex is 0-based index of all data.
+        return rowIndex !== -1 ? rowIndex + 1 : -1;
     }
-    return rowIndex !== -1 ? rowIndex + 2 : -1; // +2 because sheets are 1-based and we have a header
+    // For others, +2 because sheets are 1-based and we have a header
+    return rowIndex !== -1 ? rowIndex + 2 : -1;
 }
 
 export async function addRow(sheetName: string, rowData: any[]) {
@@ -127,6 +137,7 @@ export async function updateRow(sheetName: string, key: string, value: string, r
 
 export async function deleteRow(sheetName: string, key: string, value: string) {
     const rowIndex = await findRowIndex(sheetName, key, value);
+    
     if (rowIndex === -1) {
         throw new Error('Row not found for deletion');
     }
