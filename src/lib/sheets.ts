@@ -105,13 +105,12 @@ export async function updateRow(sheetName: string, key: string, value: string, r
 }
 
 export async function deleteRow(sheetName: string, key: string, value: string) {
-    const { spreadsheetId, auth } = await getSpreadsheet();
-
     const rowIndex = await findRowIndex(sheetName, key, value);
     if (rowIndex === -1) {
         throw new Error('Row not found for deletion');
     }
     
+    const { spreadsheetId, auth } = await getSpreadsheet();
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, auth });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
 
