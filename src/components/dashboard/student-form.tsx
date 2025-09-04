@@ -242,9 +242,11 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
             <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
-            </Button>
+            <DialogClose asChild={!isPending && form.formState.isSubmitSuccessful}>
+              <Button type="submit" disabled={isPending}>
+                  {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
+              </Button>
+            </DialogClose>
         </div>
       </form>
     </Form>
