@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "patch-package && npx playwright install --with-deps"
+    "postinstall": "patch-package && npx playwright install"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
