@@ -28,7 +28,9 @@ const getPrice = (student: Student, prices: Prices) => {
         transportFee = student.transportArea === 'Inside Limit' ? prices.transportInbound : prices.transportOutbound;
     }
     
-    return tuitionFee + transportFee;
+    const registrationFee = student.firstTime === 'Yes' ? 10 : 0;
+    
+    return tuitionFee + transportFee + registrationFee;
 };
 
 
@@ -228,7 +230,7 @@ export default function InvoicePage() {
                                     <tr key={student.id} className="border-b border-gray-200">
                                         <td className="py-2">{student.name}</td>
                                         <td className="py-2">{student.subjects}</td>
-                                        <td className="py-2"></td>
+                                        <td className="py-2">{student.firstTime === 'Yes' ? 'NR: RM10' : ''}</td>
                                         <td className="py-2 text-center">1</td>
                                         <td className="py-2 text-center">
                                             {student.level.includes('Primary') ? `P${student.level.split(' ')[1]}` : `S${student.level.split(' ')[1]}`}
@@ -366,3 +368,5 @@ export default function InvoicePage() {
         </div>
     );
 }
+
+    
