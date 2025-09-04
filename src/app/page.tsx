@@ -63,6 +63,7 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
                     <DialogTitle>Register New Student</DialogTitle>
                   </DialogHeader>
                   <StudentForm
+                    students={initialStudents}
                     onFormSubmit={() => setStudentDialogOpen(false)}
                     onSubmit={async (data) => {
                       await addStudent(data);

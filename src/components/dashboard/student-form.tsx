@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -9,12 +10,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Student, TransportArea } from "@/lib/types";
+import type { Student, StudentLevel, TransportArea } from "@/lib/types";
 import { DialogClose } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  level: z.enum(['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6']),
+  level: z.enum(studentLevels),
   subjects: z.string().min(3, "Please list at least one subject."),
   guardian: z.string().min(2, "Guardian's name is required."),
   guardianContact: z.string().min(10, "A valid contact number is required."),
@@ -22,6 +26,7 @@ const studentFormSchema = z.object({
   firstTime: z.enum(['Yes', 'No']),
   transport: z.enum(['Yes', 'No']),
   transportArea: z.enum(['Inside Limit', 'Outside Limit', 'N/A']).optional(),
+  hasSibling: z.enum(['Yes', 'No']),
 }).refine(data => {
     if (data.transport === 'Yes') {
       return data.transportArea && data.transportArea !== 'N/A';
@@ -39,10 +44,12 @@ type StudentFormProps = {
   onSubmit: (data: Omit<Student, 'id' | 'paymentStatus'>) => void;
   initialData?: Student;
   onFormSubmit?: () => void;
+  students: Student[];
 };
 
-export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentFormProps) {
+export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: StudentFormProps) {
   const [isPending, startTransition] = React.useTransition();
+  const [siblingLevelFilter, setSiblingLevelFilter] = React.useState<StudentLevel | 'all'>('all');
   
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
@@ -56,10 +63,12 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentForm
       firstTime: "Yes",
       transport: "No",
       transportArea: "N/A",
+      hasSibling: "No",
     },
   });
 
   const transportValue = form.watch("transport");
+  const hasSiblingValue = form.watch("hasSibling");
 
   const handleFormSubmit = (values: StudentFormValues) => {
     startTransition(() => {
@@ -73,9 +82,25 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentForm
     });
   };
 
+  const handleSiblingSelect = (siblingId: string) => {
+    const sibling = students.find(s => s.id === siblingId);
+    if (sibling) {
+      form.setValue("guardian", sibling.guardian);
+      form.setValue("guardianContact", sibling.guardianContact);
+      form.setValue("address", sibling.address);
+    }
+  };
+
+  const filteredSiblings = React.useMemo(() => {
+    if (siblingLevelFilter === 'all') {
+      return students;
+    }
+    return students.filter(s => s.level === siblingLevelFilter);
+  }, [students, siblingLevelFilter]);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
         <FormField
           control={form.control}
           name="name"
@@ -124,17 +149,9 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentForm
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Primary 1">Primary 1</SelectItem>
-                    <SelectItem value="Primary 2">Primary 2</SelectItem>
-                    <SelectItem value="Primary 3">Primary 3</SelectItem>
-                    <SelectItem value="Primary 4">Primary 4</SelectItem>
-                    <SelectItem value="Primary 5">Primary 5</SelectItem>
-                    <SelectItem value="Primary 6">Primary 6</SelectItem>
-                    <SelectItem value="Secondary 1">Secondary 1</SelectItem>
-                    <SelectItem value="Secondary 2">Secondary 2</SelectItem>
-                    <SelectItem value="Secondary 3">Secondary 3</SelectItem>
-                    <SelectItem value="Secondary 5">Secondary 5</SelectItem>
-                    <SelectItem value="Secondary 6">Secondary 6</SelectItem>
+                    {studentLevels.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -201,6 +218,77 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentForm
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="hasSibling"
+          render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel>Registered Sibling?</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  className="flex items-center space-x-4"
+                >
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="Yes" />
+                    </FormControl>
+                    <FormLabel className="font-normal">Yes</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="No" />
+                    </FormControl>
+                    <FormLabel className="font-normal">No</FormLabel>
+                  </FormItem>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {hasSiblingValue === 'Yes' && (
+          <div className="p-4 border rounded-md bg-muted/50 space-y-4">
+            <h4 className="font-medium">Find Sibling</h4>
+            <div className="grid grid-cols-2 gap-4">
+               <FormItem>
+                <FormLabel>Filter by Level</FormLabel>
+                 <Select onValueChange={(value: StudentLevel | 'all') => setSiblingLevelFilter(value)} defaultValue={siblingLevelFilter}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                     {studentLevels.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+               <FormItem>
+                <FormLabel>Select Sibling</FormLabel>
+                 <Select onValueChange={handleSiblingSelect} disabled={filteredSiblings.length === 0}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={filteredSiblings.length > 0 ? "Select a student" : "No students in level"}/>
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {filteredSiblings.map(sibling => (
+                      <SelectItem key={sibling.id} value={sibling.id}>{sibling.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -242,7 +330,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentForm
             </FormItem>
           )}
         />
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-4">
             <DialogClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
