@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { chromium } from 'playwright';
+import chromium from '@sparticuz/chromium';
+import core from 'playwright-core';
 
 export async function POST(req: NextRequest) {
   console.log('PDF generation request received');
@@ -13,9 +14,16 @@ export async function POST(req: NextRequest) {
       console.error('Missing htmlContent');
       return NextResponse.json({ error: 'Missing htmlContent' }, { status: 400 });
     }
-    
-    console.log('Launching local browser');
-    browser = await chromium.launch();
+
+    // Proactively load a font to prevent rendering issues in serverless
+    await chromium.font('https://raw.githack.com/googlei18n/noto-cjk/main/NotoSansJP-Regular.otf');
+
+    console.log('Launching serverless browser');
+    browser = await core.chromium.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
     
     console.log('Opening new page');
     const page = await browser.newPage();
