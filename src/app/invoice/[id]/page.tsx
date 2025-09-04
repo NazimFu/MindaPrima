@@ -28,9 +28,7 @@ const getPrice = (student: Student, prices: Prices) => {
         transportFee = student.transportArea === 'Inside Limit' ? prices.transportInbound : prices.transportOutbound;
     }
     
-    const registrationFee = student.firstTime === 'Yes' ? 10 : 0;
-    
-    return tuitionFee + transportFee + registrationFee;
+    return tuitionFee + transportFee;
 };
 
 
@@ -55,7 +53,7 @@ export default function InvoicePage() {
     ]);
     const [discount, setDiscount] = React.useState(0);
     const [notes, setNotes] = React.useState(
-        'NR: New Registration\nT(I): Transport (BP area)\nT(O): Transport (Out of BP)'
+        'T(I): Transport (BP area)\nT(O): Transport (Out of BP)'
     );
 
     React.useEffect(() => {
@@ -378,6 +376,8 @@ export default function InvoicePage() {
         </div>
     );
 }
+
+    
 
     
 
