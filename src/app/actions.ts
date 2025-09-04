@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addRow, updateRow, deleteRow, getSheet, getSheetData, findRowIndex } from '@/lib/sheets';
+import { addRow, updateRow, deleteRow, getSheet, getSheetData, findRowIndex, batchUpdatePrices } from '@/lib/sheets';
 import type { Student, Teacher, PaymentStatus, Prices, StudentLevel } from '@/lib/types';
 import { z } from 'zod';
 
@@ -129,31 +129,20 @@ export async function getPrices(): Promise<Prices> {
 }
 
 export async function updatePrices(prices: Prices) {
-    const rows: (string|number)[][] = [];
+    const rowsToUpdate: { item: string, price: number }[] = [];
     for (const [key, value] of Object.entries(prices)) {
         if (typeof value === 'object' && value !== null) {
             const levelKey = key as StudentLevel;
             for (const [numSubjects, price] of Object.entries(value)) {
                 const item = `${levelKey.split(' ')[0].toLowerCase()}_${levelKey.split(' ')[1]}_${numSubjects}`;
-                rows.push([item, price]);
+                rowsToUpdate.push({ item, price });
             }
         } else {
-            rows.push([key, value]);
+            rowsToUpdate.push({ item: key, price: value as number });
         }
     }
-
-    for (const row of rows) {
-        const [item, price] = row;
-        const itemString = item as string;
-        const rowIndex = await findRowIndex(PRICES_SHEET_NAME, 'item', itemString);
-        
-        if (rowIndex > -1) {
-            await updateRow(PRICES_SHEET_NAME, 'item', itemString, [item, price]);
-        } else {
-            await addRow(PRICES_SHEET_NAME, [item, price]);
-        }
-    }
-
+    
+    await batchUpdatePrices(rowsToUpdate);
     revalidate();
 }
 

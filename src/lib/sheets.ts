@@ -171,3 +171,59 @@ export async function deleteRow(sheetName: string, key: string, value: string) {
         },
     });
 }
+
+export async function batchUpdatePrices(prices: { item: string, price: number }[]) {
+    const { spreadsheetId, auth } = await getSpreadsheet();
+
+    // 1. Read all existing data once.
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        auth,
+        range: PRICES_SHEET_NAME,
+    });
+    const existingData = response.data.values || [];
+    const existingPrices = new Map(existingData.map(row => [row[0], row]));
+
+    const dataUpdateRequests: sheets_v4.Schema$ValueRange[] = [];
+    const rowsToAdd: any[][] = [];
+
+    // 2. Process prices locally.
+    prices.forEach(({ item, price }) => {
+        const rowIndex = existingData.findIndex(row => row[0] === item);
+        if (rowIndex !== -1) {
+            // Prepare update request
+            dataUpdateRequests.push({
+                range: `${PRICES_SHEET_NAME}!A${rowIndex + 1}`,
+                values: [[item, price]],
+            });
+        } else {
+            // Prepare append request
+            rowsToAdd.push([item, price]);
+        }
+    });
+
+    // 3. Batch write updates.
+    if (dataUpdateRequests.length > 0) {
+        await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId,
+            auth,
+            requestBody: {
+                valueInputOption: 'USER_ENTERED',
+                data: dataUpdateRequests,
+            },
+        });
+    }
+
+    // 4. Append new rows.
+    if (rowsToAdd.length > 0) {
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            auth,
+            range: PRICES_SHEET_NAME,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: rowsToAdd,
+            },
+        });
+    }
+}
