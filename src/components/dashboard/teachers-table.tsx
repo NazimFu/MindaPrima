@@ -33,29 +33,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Teacher } from "@/lib/types";
 import { TeacherForm } from "./teacher-form";
 import { useToast } from "@/hooks/use-toast";
-
+import { updateTeacher, deleteTeacher } from "@/app/actions";
 
 type TeachersTableProps = {
   teachers: Teacher[];
-  onUpdateTeacher: (teacher: Teacher) => void;
-  onDeleteTeacher: (id: string) => void;
-  isReadOnly?: boolean;
 };
 
-export function TeachersTable({ teachers, onUpdateTeacher, onDeleteTeacher, isReadOnly = false }: TeachersTableProps) {
+export function TeachersTable({ teachers }: TeachersTableProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedTeacher, setSelectedTeacher] = React.useState<Teacher | null>(null);
 
   const handleEdit = (teacher: Teacher) => {
-    if (isReadOnly) return;
     setSelectedTeacher(teacher);
     setEditDialogOpen(true);
   };
   
-  const handleUpdate = (values: Omit<Teacher, 'id'>) => {
+  const handleUpdate = async (values: Omit<Teacher, 'id'>) => {
     if (selectedTeacher) {
-      onUpdateTeacher({ ...values, id: selectedTeacher.id });
+      await updateTeacher({ ...values, id: selectedTeacher.id });
     }
     setEditDialogOpen(false);
     setSelectedTeacher(null);
@@ -81,52 +77,60 @@ export function TeachersTable({ teachers, onUpdateTeacher, onDeleteTeacher, isRe
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teachers.map((teacher) => (
-              <TableRow key={teacher.id}>
-                <TableCell className="font-medium">{teacher.name}</TableCell>
-                <TableCell>{teacher.subject}</TableCell>
-                <TableCell>{teacher.contact}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleEdit(teacher)} disabled={isReadOnly}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                       <AlertDialog>
-                        <AlertDialogTrigger asChild disabled={isReadOnly}>
-                           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600" disabled={isReadOnly}>
-                             <Trash2 className="mr-2 h-4 w-4" />
-                             Delete
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the teacher's record.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDeleteTeacher(teacher.id)}>
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+            {teachers.length > 0 ? (
+              teachers.map((teacher) => (
+                <TableRow key={teacher.id}>
+                  <TableCell className="font-medium">{teacher.name}</TableCell>
+                  <TableCell>{teacher.subject}</TableCell>
+                  <TableCell>{teacher.contact}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onSelect={() => handleEdit(teacher)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                         <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                               <Trash2 className="mr-2 h-4 w-4" />
+                               Delete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the teacher's record.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteTeacher(teacher.id)}>
+                                Continue
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        No teachers found.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Student, TransportArea } from "@/lib/types";
+import { DialogClose } from "@/components/ui/dialog";
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -40,6 +41,8 @@ type StudentFormProps = {
 };
 
 export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
+  const [isPending, startTransition] = React.useTransition();
+  
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: initialData || {
@@ -58,9 +61,11 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
   const transportValue = form.watch("transport");
 
   const handleFormSubmit = (values: StudentFormValues) => {
-    onSubmit({
-      ...values,
-      transportArea: values.transport === 'No' ? 'N/A' : values.transportArea as TransportArea,
+    startTransition(() => {
+        onSubmit({
+          ...values,
+          transportArea: values.transport === 'No' ? 'N/A' : values.transportArea as TransportArea,
+        });
     });
   };
 
@@ -233,8 +238,13 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
             </FormItem>
           )}
         />
-        <div className="flex justify-end">
-          <Button type="submit">{initialData ? 'Update Student' : 'Add Student'}</Button>
+        <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+                {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
+            </Button>
         </div>
       </form>
     </Form>

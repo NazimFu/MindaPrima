@@ -38,31 +38,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Student, PaymentStatus } from "@/lib/types";
 import { StudentForm } from "./student-form";
 import { useToast } from "@/hooks/use-toast";
+import { updateStudent, deleteStudent, updateStudentStatus } from "@/app/actions";
 
 const paymentStatuses: PaymentStatus[] = ['Paid', 'Pending', 'Overdue'];
 
 type StudentsTableProps = {
   students: Student[];
-  onUpdateStudent: (student: Student) => void;
-  onDeleteStudent: (id: string) => void;
-  onUpdateStudentStatus: (id: string, status: PaymentStatus) => void;
-  isReadOnly?: boolean;
 };
 
-export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUpdateStudentStatus, isReadOnly = false }: StudentsTableProps) {
+export function StudentsTable({ students }: StudentsTableProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(null);
 
   const handleEdit = (student: Student) => {
-    if(isReadOnly) return;
     setSelectedStudent(student);
     setEditDialogOpen(true);
   };
   
-  const handleUpdate = (values: Omit<Student, 'id' | 'paymentStatus'>) => {
+  const handleUpdate = async (values: Omit<Student, 'id' | 'paymentStatus'>) => {
     if (selectedStudent) {
-      onUpdateStudent({ ...values, id: selectedStudent.id, paymentStatus: selectedStudent.paymentStatus });
+      await updateStudent({ ...values, id: selectedStudent.id, paymentStatus: selectedStudent.paymentStatus });
     }
     setEditDialogOpen(false);
     setSelectedStudent(null);
@@ -72,8 +68,8 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
     });
   };
 
-  const handleStatusUpdate = (studentId: string, status: PaymentStatus) => {
-    onUpdateStudentStatus(studentId, status);
+  const handleStatusUpdate = async (studentId: string, status: PaymentStatus) => {
+    await updateStudentStatus(studentId, status);
     toast({
       title: "Success",
       description: "Payment status updated.",
@@ -137,7 +133,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onSelect={() => handleEdit(student)} disabled={isReadOnly}>
+                        <DropdownMenuItem onSelect={() => handleEdit(student)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -146,7 +142,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                           Invoice
                         </DropdownMenuItem>
                         <DropdownMenuSub>
-                          <DropdownMenuSubTrigger disabled={isReadOnly}>
+                          <DropdownMenuSubTrigger>
                             <Tags className="mr-2 h-4 w-4" />
                             <span>Update Status</span>
                           </DropdownMenuSubTrigger>
@@ -164,8 +160,8 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
                         <AlertDialog>
-                          <AlertDialogTrigger asChild disabled={isReadOnly}>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600" disabled={isReadOnly}>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
                                <Trash2 className="mr-2 h-4 w-4" />
                                Delete
                             </DropdownMenuItem>
@@ -179,7 +175,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => onDeleteStudent(student.id)}>
+                              <AlertDialogAction onClick={() => deleteStudent(student.id)}>
                                 Continue
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -193,7 +189,7 @@ export function StudentsTable({ students, onUpdateStudent, onDeleteStudent, onUp
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
-                  No students found for this level.
+                  No students found.
                 </TableCell>
               </TableRow>
             )}
