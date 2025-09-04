@@ -2,7 +2,8 @@
 'use client';
 
 import * as React from "react";
-import { PlusCircle } from "lucide-react";
+import Link from 'next/link';
+import { PlusCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,12 +16,9 @@ import { GuardiansList } from "@/components/dashboard/guardians-list";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
-import { PriceManagement } from "@/components/dashboard/price-management";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getStudents, getTeachers, addStudent, addTeacher, getPrices } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
-import { GroupedInvoice } from "@/components/dashboard/grouped-invoice";
-import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
@@ -109,16 +107,19 @@ function Dashboard({
           <TabsContent value="overview" className="space-y-4">
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <OverviewCards students={initialStudents} teachers={initialTeachers} />
-                <PriceManagement initialPrices={initialPrices} />
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Price Management</CardTitle>
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-xs text-muted-foreground mb-4">Update tuition and transport fees.</p>
+                        <Button asChild size="sm">
+                            <Link href="/prices">Go to Price Settings</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
              </div>
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <div className="lg:col-span-4">
-                    <GroupedInvoice students={initialStudents} prices={initialPrices} />
-                </div>
-                <div className="lg:col-span-3">
-                    <SmartSuggestions />
-                </div>
-            </div>
           </TabsContent>
           <TabsContent value="students">
              <Card>
