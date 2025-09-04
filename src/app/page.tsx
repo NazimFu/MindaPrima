@@ -18,6 +18,7 @@ import { TeacherForm } from "@/components/dashboard/teacher-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getStudents, getTeachers, addStudent, addTeacher } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
+import { GroupedInvoice } from "@/components/dashboard/grouped-invoice";
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
 
@@ -98,6 +99,7 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
           </div>
           <TabsContent value="overview" className="space-y-4">
             <OverviewCards students={initialStudents} teachers={initialTeachers} />
+            <GroupedInvoice students={initialStudents} />
           </TabsContent>
           <TabsContent value="students">
              <Card>
