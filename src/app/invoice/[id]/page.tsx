@@ -59,14 +59,10 @@ export default function InvoicePage() {
             setInvoiceData(parsedData);
             
             const initialFees: FlexibleFee[] = [
+                { description: 'New Registration', details: 'One-time fee', type: 'Addition', amount: 0 },
                 { description: 'Personal Tuition', details: '1 Person', type: 'Addition', amount: 0 },
                 { description: 'Worksheet', details: 'Once a year (3P)', type: 'Addition', amount: 0 },
             ];
-
-            const hasFirstTimer = parsedData.children.some((student: Student) => student.firstTime === 'Yes');
-            if (hasFirstTimer) {
-                initialFees.unshift({ description: 'New Registration', details: 'One-time fee', type: 'Addition', amount: 10 });
-            }
             
             setFlexibleFees(initialFees);
         }
