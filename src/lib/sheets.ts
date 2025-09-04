@@ -1,3 +1,4 @@
+
 import { google } from 'googleapis';
 import type { sheets_v4 } from 'googleapis';
 
@@ -98,17 +99,22 @@ export async function updateRow(sheetName: string, key: string, value: string, r
 }
 
 export async function deleteRow(sheetName: string, key: string, value: string) {
+    const { spreadsheetId, auth } = await getSpreadsheet();
+
+    // First, find the row index to delete
     const rowIndex = await findRowIndex(sheetName, key, value);
     if (rowIndex === -1) {
         throw new Error('Row not found for deletion');
     }
-    
-    const sheet = await getSheet(sheetName);
-    if (!sheet?.properties?.sheetId) {
-         throw new Error('Sheet properties not found');
-    }
 
-    const { spreadsheetId, auth } = await getSpreadsheet();
+    // Then, get all sheets to find the sheetId
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, auth });
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
+
+    if (!sheet?.properties?.sheetId) {
+        throw new Error('Sheet properties not found');
+    }
+    const sheetId = sheet.properties.sheetId;
 
     await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
@@ -118,7 +124,7 @@ export async function deleteRow(sheetName: string, key: string, value: string) {
                 {
                     deleteDimension: {
                         range: {
-                            sheetId: sheet.properties.sheetId,
+                            sheetId: sheetId,
                             dimension: 'ROWS',
                             startIndex: rowIndex - 1,
                             endIndex: rowIndex,
