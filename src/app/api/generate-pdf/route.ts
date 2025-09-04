@@ -15,9 +15,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing htmlContent' }, { status: 400 });
     }
 
-    // Proactively load a font to prevent rendering issues in serverless
-    await chromium.font('https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/JP/NotoSansJP-Regular.otf');
-
     console.log('Launching serverless browser');
     browser = await core.chromium.launch({
       args: chromium.args,
