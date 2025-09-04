@@ -30,6 +30,48 @@ function revalidate() {
     revalidatePath('/');
 }
 
+export async function getStudents(): Promise<Student[]> {
+    try {
+        const studentSheet = await getSheet(STUDENT_SHEET_NAME);
+        if (!studentSheet) return [];
+        const data = await getSheetData(studentSheet);
+        return data.map((row: any[]): Student => ({
+            id: row[0],
+            name: row[1],
+            level: row[2],
+            subjects: row[3],
+            guardian: row[4],
+            guardianContact: row[5],
+            address: row[6],
+            transport: row[7],
+            transportArea: row[8],
+            paymentStatus: row[9],
+            firstTime: row[10],
+        }));
+    } catch (error) {
+        console.error("Error fetching students:", error);
+        return [];
+    }
+}
+
+export async function getTeachers(): Promise<Teacher[]> {
+    try {
+        const teacherSheet = await getSheet(TEACHER_SHEET_NAME);
+        if (!teacherSheet) return [];
+        const data = await getSheetData(teacherSheet);
+        return data.map((row: any[]): Teacher => ({
+            id: row[0],
+            name: row[1],
+            subject: row[2],
+            contact: row[3],
+        }));
+    } catch (error) {
+        console.error("Error fetching teachers:", error);
+        return [];
+    }
+}
+
+
 export async function addStudent(data: Omit<Student, 'id' | 'paymentStatus'>) {
     const validatedData = StudentSchema.parse(data);
     const newId = `STU-${Date.now()}`;

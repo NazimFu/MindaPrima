@@ -16,8 +16,7 @@ import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getStudents, getTeachers } from "@/lib/sheets";
-import { addStudent, addTeacher } from "@/app/actions";
+import { getStudents, getTeachers, addStudent, addTeacher } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
