@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { Teacher } from "@/lib/types";
-import { DialogClose } from "../ui/dialog";
+import { DialogClose } from "@/components/ui/dialog";
 
 const teacherFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -21,9 +21,10 @@ type TeacherFormValues = z.infer<typeof teacherFormSchema>;
 type TeacherFormProps = {
   onSubmit: (data: TeacherFormValues) => void;
   initialData?: Teacher;
+  onFormSubmit?: () => void;
 };
 
-export function TeacherForm({ onSubmit, initialData }: TeacherFormProps) {
+export function TeacherForm({ onSubmit, initialData, onFormSubmit }: TeacherFormProps) {
     const [isPending, startTransition] = React.useTransition();
 
   const form = useForm<TeacherFormValues>({
@@ -38,6 +39,9 @@ export function TeacherForm({ onSubmit, initialData }: TeacherFormProps) {
   const handleFormSubmit = (values: TeacherFormValues) => {
     startTransition(() => {
         onSubmit(values);
+        if (onFormSubmit) {
+            onFormSubmit();
+        }
     });
   };
 
@@ -85,7 +89,7 @@ export function TeacherForm({ onSubmit, initialData }: TeacherFormProps) {
         />
         <div className="flex justify-end gap-2">
             <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
             <Button type="submit" disabled={isPending}>
                 {isPending ? 'Saving...' : (initialData ? 'Update Teacher' : 'Add Teacher')}

@@ -38,9 +38,10 @@ type StudentFormValues = z.infer<typeof studentFormSchema>;
 type StudentFormProps = {
   onSubmit: (data: Omit<Student, 'id' | 'paymentStatus'>) => void;
   initialData?: Student;
+  onFormSubmit?: () => void;
 };
 
-export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
+export function StudentForm({ onSubmit, initialData, onFormSubmit }: StudentFormProps) {
   const [isPending, startTransition] = React.useTransition();
   
   const form = useForm<StudentFormValues>({
@@ -66,6 +67,9 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
           ...values,
           transportArea: values.transport === 'No' ? 'N/A' : values.transportArea as TransportArea,
         });
+        if (onFormSubmit) {
+            onFormSubmit();
+        }
     });
   };
 
@@ -240,13 +244,11 @@ export function StudentForm({ onSubmit, initialData }: StudentFormProps) {
         />
         <div className="flex justify-end gap-2">
             <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
-            <DialogClose asChild={!isPending && form.formState.isSubmitSuccessful}>
-              <Button type="submit" disabled={isPending}>
-                  {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
-              </Button>
-            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+                {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
+            </Button>
         </div>
       </form>
     </Form>
