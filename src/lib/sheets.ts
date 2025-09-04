@@ -10,7 +10,7 @@ const TEACHER_SHEET_NAME = 'Teachers';
 const PRICES_SHEET_NAME = 'Prices';
 const STUDENT_HEADER = ['id', 'name', 'level', 'subjects', 'guardian', 'guardianContact', 'address', 'transport', 'transportArea', 'paymentStatus', 'firstTime'];
 const TEACHER_HEADER = ['id', 'name', 'subject', 'contact'];
-const PRICES_HEADER = ['item', 'price'];
+const PRICES_HEADER = ['qtySubjects', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'S1', 'S2', 'S3', 'S5', 'S6', 'TI', 'TO'];
 
 
 async function getAuth() {
@@ -50,7 +50,7 @@ export async function getSheet(sheetName: string): Promise<sheets_v4.Schema$Shee
     }
 }
 
-export async function getSheetData(sheet: sheets_v4.Schema$Sheet) {
+export async function getSheetData(sheet: sheets_v4.Schema$Sheet, includeHeader = false) {
     const { spreadsheetId, auth } = await getSpreadsheet();
     if (!sheet?.properties?.title) {
         throw new Error('Sheet properties not found or title is missing');
@@ -62,32 +62,31 @@ export async function getSheetData(sheet: sheets_v4.Schema$Sheet) {
         range,
     });
     
-    // For Prices sheet, return the header. For others, skip it.
-    if (range === PRICES_SHEET_NAME) {
-         return response.data.values || [];
-    }
-    return response.data.values?.slice(1) || []; // Skip header row for other sheets
+    const values = response.data.values || [];
+    return includeHeader ? values : values.slice(1);
 }
 
 export async function findRowIndex(sheetName: string, key: string, value: string): Promise<number> {
     const sheet = await getSheet(sheetName);
     if (!sheet) return -1;
 
-    let data;
-    let header;
-
     const { spreadsheetId, auth } = await getSpreadsheet();
     const range = sheet.properties.title;
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, auth, range });
     const allData = response.data.values || [];
 
-    if (sheetName === PRICES_SHEET_NAME) {
-        header = PRICES_HEADER;
-        data = allData;
-    } else {
-        if (sheetName === STUDENT_SHEET_NAME) header = STUDENT_HEADER;
-        if (sheetName === TEACHER_SHEET_NAME) header = TEACHER_HEADER;
+    let header;
+    let data;
+
+    if (sheetName === STUDENT_SHEET_NAME) {
+        header = STUDENT_HEADER;
+        data = allData.slice(1); // data without header
+    } else if (sheetName === TEACHER_SHEET_NAME) {
+        header = TEACHER_HEADER;
         data = allData.slice(1);
+    } else { // For other sheets like Prices, the logic might differ
+         header = allData[0] || [];
+         data = allData.slice(1);
     }
     
     if (!header) return -1;
@@ -97,11 +96,7 @@ export async function findRowIndex(sheetName: string, key: string, value: string
     
     const rowIndex = data.findIndex(row => row[colIndex] === value);
     
-    if (sheetName === PRICES_SHEET_NAME) {
-        // For prices, rowIndex is 0-based index of all data.
-        return rowIndex !== -1 ? rowIndex + 1 : -1;
-    }
-    // For others, +2 because sheets are 1-based and we have a header
+    // +2 because sheets are 1-based and we sliced off the header
     return rowIndex !== -1 ? rowIndex + 2 : -1;
 }
 
@@ -118,16 +113,16 @@ export async function addRow(sheetName: string, rowData: any[]) {
     });
 }
 
-export async function updateRow(sheetName: string, key: string, value: string, rowData: any[]) {
-    const rowIndex = await findRowIndex(sheetName, key, value);
-    if (rowIndex === -1) {
+export async function updateRow(sheetName: string, key: string, value: string, rowData: any[], rowIndex?: number) {
+    const index = rowIndex ?? await findRowIndex(sheetName, key, value);
+    if (index === -1) {
         throw new Error('Row not found for update');
     }
     const { spreadsheetId, auth } = await getSpreadsheet();
     await sheets.spreadsheets.values.update({
         spreadsheetId,
         auth,
-        range: `${sheetName}!A${rowIndex}`,
+        range: `${sheetName}!A${index}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
             values: [rowData],
@@ -136,21 +131,19 @@ export async function updateRow(sheetName: string, key: string, value: string, r
 }
 
 export async function deleteRow(sheetName: string, key: string, value: string) {
-    const rowIndex = await findRowIndex(sheetName, key, value);
-    
-    if (rowIndex === -1) {
-        throw new Error('Row not found for deletion');
-    }
-    
     const { spreadsheetId, auth } = await getSpreadsheet();
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, auth });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
 
-    // The sheetId can be 0, so we check for null/undefined specifically.
     if (sheet?.properties?.sheetId === null || sheet?.properties?.sheetId === undefined) {
         throw new Error('Sheet properties not found, cannot delete row.');
     }
     const sheetId = sheet.properties.sheetId;
+
+    const rowIndex = await findRowIndex(sheetName, key, value);
+    if (rowIndex === -1) {
+        throw new Error('Row not found for deletion');
+    }
 
     await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
@@ -172,58 +165,42 @@ export async function deleteRow(sheetName: string, key: string, value: string) {
     });
 }
 
-export async function batchUpdatePrices(prices: { item: string, price: number }[]) {
+export async function batchUpdateSheet(
+    sheetName: string,
+    updateFn: (data: any[][]) => any[][]
+) {
     const { spreadsheetId, auth } = await getSpreadsheet();
+    const sheet = await getSheet(sheetName);
+    if (!sheet || !sheet.properties?.title) {
+        throw new Error(`Sheet ${sheetName} not found.`);
+    }
 
-    // 1. Read all existing data once.
+    // 1. Read all existing data.
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
         auth,
-        range: PRICES_SHEET_NAME,
+        range: sheet.properties.title,
     });
     const existingData = response.data.values || [];
-    const existingPrices = new Map(existingData.map(row => [row[0], row]));
 
-    const dataUpdateRequests: sheets_v4.Schema$ValueRange[] = [];
-    const rowsToAdd: any[][] = [];
+    // 2. Apply transformations.
+    const newData = updateFn(existingData);
 
-    // 2. Process prices locally.
-    prices.forEach(({ item, price }) => {
-        const rowIndex = existingData.findIndex(row => row[0] === item);
-        if (rowIndex !== -1) {
-            // Prepare update request
-            dataUpdateRequests.push({
-                range: `${PRICES_SHEET_NAME}!A${rowIndex + 1}`,
-                values: [[item, price]],
-            });
-        } else {
-            // Prepare append request
-            rowsToAdd.push([item, price]);
-        }
+    // 3. Clear the sheet.
+    await sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        auth,
+        range: sheet.properties.title,
     });
 
-    // 3. Batch write updates.
-    if (dataUpdateRequests.length > 0) {
-        await sheets.spreadsheets.values.batchUpdate({
-            spreadsheetId,
-            auth,
-            requestBody: {
-                valueInputOption: 'USER_ENTERED',
-                data: dataUpdateRequests,
-            },
-        });
-    }
-
-    // 4. Append new rows.
-    if (rowsToAdd.length > 0) {
-        await sheets.spreadsheets.values.append({
-            spreadsheetId,
-            auth,
-            range: PRICES_SHEET_NAME,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: rowsToAdd,
-            },
-        });
-    }
+    // 4. Write new data.
+    await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        auth,
+        range: sheet.properties.title,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+            values: newData,
+        },
+    });
 }
