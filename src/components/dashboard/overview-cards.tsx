@@ -1,3 +1,4 @@
+
 import type { Student, Teacher } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, User, DollarSign } from 'lucide-react';
@@ -13,7 +14,7 @@ export function OverviewCards({ students, teachers }: OverviewCardsProps) {
   const pendingPayments = students.filter(s => s.paymentStatus === 'Pending' || s.paymentStatus === 'Overdue').length;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+    <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Students</CardTitle>
@@ -44,6 +45,6 @@ export function OverviewCards({ students, teachers }: OverviewCardsProps) {
           <p className="text-xs text-muted-foreground">Invoices require attention</p>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

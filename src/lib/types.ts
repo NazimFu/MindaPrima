@@ -25,6 +25,13 @@ export type Teacher = {
   contact: string;
 };
 
+export type Prices = {
+    [key in StudentLevel]?: { [numSubjects: string]: number };
+} & {
+    transportInbound: number;
+    transportOutbound: number;
+};
+
 export type MonthlyData = {
   students: Student[];
   teachers: Teacher[];

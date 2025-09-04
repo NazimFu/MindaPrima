@@ -1,12 +1,15 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { addRow, updateRow, deleteRow, getSheet, getSheetData } from '@/lib/sheets';
-import type { Student, Teacher, PaymentStatus } from '@/lib/types';
+import type { Student, Teacher, PaymentStatus, Prices, StudentLevel } from '@/lib/types';
 import { z } from 'zod';
 
 const STUDENT_SHEET_NAME = 'Students';
 const TEACHER_SHEET_NAME = 'Teachers';
+const PRICES_SHEET_NAME = 'Prices';
+
 
 const StudentSchema = z.object({
     name: z.string(),
@@ -69,6 +72,82 @@ export async function getTeachers(): Promise<Teacher[]> {
         console.error("Error fetching teachers:", error);
         return [];
     }
+}
+
+export async function getPrices(): Promise<Prices> {
+    const defaultPrices: Prices = {
+        'Primary 1': { '1': 40, '2': 70, '3': 100 },
+        'Primary 2': { '1': 40, '2': 70, '3': 100 },
+        'Primary 3': { '1': 40, '2': 70, '3': 100 },
+        'Primary 4': { '1': 45, '2': 80, '3': 115 },
+        'Primary 5': { '1': 45, '2': 80, '3': 115 },
+        'Primary 6': { '1': 45, '2': 80, '3': 115 },
+        'Secondary 1': { '1': 50, '2': 90, '3': 130 },
+        'Secondary 2': { '1': 50, '2': 90, '3': 130 },
+        'Secondary 3': { '1': 50, '2': 90, '3': 130 },
+        'Secondary 5': { '1': 55, '2': 100, '3': 145 },
+        'Secondary 6': { '1': 55, '2': 100, '3': 145 },
+        transportInbound: 20,
+        transportOutbound: 40,
+    };
+
+    try {
+        const pricesSheet = await getSheet(PRICES_SHEET_NAME);
+        if (!pricesSheet) {
+            console.log("Prices sheet not found, returning default prices.");
+            return defaultPrices;
+        }
+        const data = await getSheetData(pricesSheet);
+        if (data.length <= 1) { // Only header or empty
+            return defaultPrices;
+        }
+        
+        const prices: any = {};
+        data.slice(1).forEach(row => { // skip header
+            const [item, priceStr] = row;
+            const price = parseFloat(priceStr);
+            if (!item || isNaN(price)) return;
+            
+            if (item.startsWith('transport')) {
+                prices[item] = price;
+            } else {
+                const parts = item.split('_');
+                const level = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1]}` as StudentLevel;
+                const numSubjects = parts[2];
+                if (!prices[level]) {
+                    prices[level] = {};
+                }
+                prices[level][numSubjects] = price;
+            }
+        });
+        return prices as Prices;
+
+    } catch (error) {
+        console.error("Error fetching prices:", error);
+        return defaultPrices;
+    }
+}
+
+export async function updatePrices(prices: Prices) {
+    const rows: (string|number)[][] = [['item', 'price']];
+    for (const [key, value] of Object.entries(prices)) {
+        if (typeof value === 'object' && value !== null) {
+            const levelKey = key as StudentLevel;
+            for (const [numSubjects, price] of Object.entries(value)) {
+                const item = `${levelKey.split(' ')[0].toLowerCase()}_${levelKey.split(' ')[1]}_${numSubjects}`;
+                rows.push([item, price]);
+            }
+        } else {
+            rows.push([key, value]);
+        }
+    }
+
+    for (const row of rows.slice(1)) { // Skip header
+        const [item, price] = row;
+        await updateRow(PRICES_SHEET_NAME, 'item', item as string, [item, price]);
+    }
+
+    revalidate();
 }
 
 

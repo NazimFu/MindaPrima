@@ -1,8 +1,9 @@
+
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
-import type { Student } from "@/lib/types";
+import type { Student, Prices } from "@/lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Phone, User, BookOpen, Hash } from "lucide-react";
@@ -10,6 +11,7 @@ import { Phone, User, BookOpen, Hash } from "lucide-react";
 type GuardiansListProps = {
   students: Student[];
   selectedMonth: string;
+  prices: Prices;
 };
 
 type GuardianGroup = {
@@ -21,7 +23,7 @@ type GuardianGroup = {
   };
 };
 
-export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
+export function GuardiansList({ students, selectedMonth, prices }: GuardiansListProps) {
   const groupedByGuardian = React.useMemo(() => {
     const monthPrefix = selectedMonth === 'current' ? 
       new Date().toLocaleString('default', { month: 'short' }).toUpperCase() :
@@ -59,11 +61,13 @@ export function GuardiansList({ students, selectedMonth }: GuardiansListProps) {
     <Accordion type="multiple" className="w-full">
       {guardians.map((guardianName) => {
         const guardianInfo = groupedByGuardian[guardianName];
-        const invoiceUrl = `/invoice/${guardianInfo.invoiceId}?data=${encodeURIComponent(JSON.stringify({
-          guardianName,
-          month: selectedMonth,
-          ...guardianInfo
-        }))}`;
+        const invoiceData = {
+            guardianName,
+            month: selectedMonth,
+            ...guardianInfo,
+            prices,
+        };
+        const invoiceUrl = `/invoice/${guardianInfo.invoiceId}?data=${encodeURIComponent(JSON.stringify(invoiceData))}`;
         
         return (
           <AccordionItem value={guardianName} key={guardianName}>

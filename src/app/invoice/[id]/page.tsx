@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { Student } from '@/lib/types';
+import type { Student, Prices } from '@/lib/types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ArrowLeft, FileDown, PlusCircle, Trash2 } from 'lucide-react';
@@ -13,13 +14,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const getPrice = (student: Student) => {
-    let price = 40; // Base price from image
-    if(student.transport === 'Yes') {
-        price += student.transportArea === 'Inside Limit' ? 20 : 40;
+const getPrice = (student: Student, prices: Prices) => {
+    const numSubjects = student.subjects.split(',').map(s => s.trim()).filter(Boolean).length;
+    const levelPrices = prices[student.level];
+
+    let tuitionFee = 0;
+    if (levelPrices && levelPrices[numSubjects.toString()]) {
+        tuitionFee = levelPrices[numSubjects.toString()];
     }
-    return price;
-}
+
+    let transportFee = 0;
+    if (student.transport === 'Yes') {
+        transportFee = student.transportArea === 'Inside Limit' ? prices.transportInbound : prices.transportOutbound;
+    }
+    
+    return tuitionFee + transportFee;
+};
+
 
 type FlexibleFee = {
     description: string;
@@ -117,7 +128,7 @@ export default function InvoicePage() {
         );
     }
     
-    const subtotal = invoiceData.children.reduce((acc: number, student: Student) => acc + getPrice(student), 0);
+    const subtotal = invoiceData.children.reduce((acc: number, student: Student) => acc + getPrice(student, invoiceData.prices), 0);
     const flexibleTotal = flexibleFees.reduce((acc, fee) => {
         return acc + (fee.amount || 0);
     }, 0);
@@ -222,7 +233,7 @@ export default function InvoicePage() {
                                         <td className="py-2 text-center">
                                             {student.level.includes('Primary') ? `P${student.level.split(' ')[1]}` : `S${student.level.split(' ')[1]}`}
                                         </td>
-                                        <td className="py-2 text-right">RM{getPrice(student).toFixed(2)}</td>
+                                        <td className="py-2 text-right">RM{getPrice(student, invoiceData.prices).toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>

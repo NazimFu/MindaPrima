@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -35,7 +36,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { Student, PaymentStatus } from "@/lib/types";
+import type { Student, PaymentStatus, Prices } from "@/lib/types";
 import { StudentForm } from "./student-form";
 import { useToast } from "@/hooks/use-toast";
 import { updateStudent, deleteStudent, updateStudentStatus } from "@/app/actions";
@@ -44,9 +45,10 @@ const paymentStatuses: PaymentStatus[] = ['Paid', 'Pending', 'Overdue'];
 
 type StudentsTableProps = {
   students: Student[];
+  prices: Prices;
 };
 
-export function StudentsTable({ students }: StudentsTableProps) {
+export function StudentsTable({ students, prices }: StudentsTableProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(null);
@@ -201,7 +203,7 @@ export function StudentsTable({ students }: StudentsTableProps) {
           <DialogHeader>
             <DialogTitle>Edit Student Information</DialogTitle>
           </DialogHeader>
-          {selectedStudent && <StudentForm onSubmit={handleUpdate} initialData={selectedStudent} />}
+          {selectedStudent && <StudentForm onSubmit={handleUpdate} initialData={selectedStudent} students={students} />}
         </DialogContent>
       </Dialog>
     </>

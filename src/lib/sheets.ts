@@ -7,8 +7,11 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 
 const STUDENT_SHEET_NAME = 'Students';
 const TEACHER_SHEET_NAME = 'Teachers';
+const PRICES_SHEET_NAME = 'Prices';
 const STUDENT_HEADER = ['id', 'name', 'level', 'subjects', 'guardian', 'guardianContact', 'address', 'transport', 'transportArea', 'paymentStatus', 'firstTime'];
 const TEACHER_HEADER = ['id', 'name', 'subject', 'contact'];
+const PRICES_HEADER = ['item', 'price'];
+
 
 async function getAuth() {
     const credentials = {
@@ -58,6 +61,10 @@ export async function getSheetData(sheet: sheets_v4.Schema$Sheet) {
         auth,
         range,
     });
+    // For Prices sheet, return the header. For others, skip it.
+    if (range === PRICES_SHEET_NAME) {
+         return response.data.values || [];
+    }
     return response.data.values?.slice(1) || []; // Skip header row
 }
 
@@ -66,11 +73,25 @@ async function findRowIndex(sheetName: string, key: string, value: string): Prom
     if (!sheet) return -1;
 
     const data = await getSheetData(sheet);
-    const header = sheetName === STUDENT_SHEET_NAME ? STUDENT_HEADER : TEACHER_HEADER;
+    let header;
+    if (sheetName === STUDENT_SHEET_NAME) {
+        header = STUDENT_HEADER;
+    } else if (sheetName === TEACHER_SHEET_NAME) {
+        header = TEACHER_HEADER;
+    } else if (sheetName === PRICES_SHEET_NAME) {
+        header = PRICES_HEADER;
+    } else {
+        return -1;
+    }
+
     const colIndex = header.indexOf(key);
     if (colIndex === -1) return -1;
     
     const rowIndex = data.findIndex(row => row[colIndex] === value);
+
+    if (sheetName === PRICES_SHEET_NAME) {
+        return rowIndex !== -1 ? rowIndex + 1 : -1; // 1-based index, includes header
+    }
     return rowIndex !== -1 ? rowIndex + 2 : -1; // +2 because sheets are 1-based and we have a header
 }
 

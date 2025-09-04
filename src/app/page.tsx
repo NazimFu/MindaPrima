@@ -8,23 +8,32 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import type { StudentLevel, Student, Teacher } from "@/lib/types";
+import type { StudentLevel, Student, Teacher, Prices } from "@/lib/types";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
 import { GuardiansList } from "@/components/dashboard/guardians-list";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { StudentForm } from "@/components/dashboard/student-form";
 import { TeacherForm } from "@/components/dashboard/teacher-form";
+import { PriceManagement } from "@/components/dashboard/price-management";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getStudents, getTeachers, addStudent, addTeacher } from "@/app/actions";
+import { getStudents, getTeachers, addStudent, addTeacher, getPrices } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { GroupedInvoice } from "@/components/dashboard/grouped-invoice";
+import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
+
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
 
-// This is a temporary workaround until Next.js provides a better solution for server-side data fetching in client components.
-// We are fetching the data once and passing it down to the components that need it.
-function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Student[]; initialTeachers: Teacher[] }) {
+function Dashboard({ 
+  initialStudents, 
+  initialTeachers, 
+  initialPrices 
+}: { 
+  initialStudents: Student[]; 
+  initialTeachers: Teacher[];
+  initialPrices: Prices;
+}) {
   const [isStudentDialogOpen, setStudentDialogOpen] = React.useState(false);
   const [isTeacherDialogOpen, setTeacherDialogOpen] = React.useState(false);
   const { toast } = useToast();
@@ -98,8 +107,18 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
             </div>
           </div>
           <TabsContent value="overview" className="space-y-4">
-            <OverviewCards students={initialStudents} teachers={initialTeachers} />
-            <GroupedInvoice students={initialStudents} />
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <OverviewCards students={initialStudents} teachers={initialTeachers} />
+                <PriceManagement initialPrices={initialPrices} />
+             </div>
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <div className="lg:col-span-4">
+                    <GroupedInvoice students={initialStudents} prices={initialPrices} />
+                </div>
+                <div className="lg:col-span-3">
+                    <SmartSuggestions />
+                </div>
+            </div>
           </TabsContent>
           <TabsContent value="students">
              <Card>
@@ -118,12 +137,14 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
                   <TabsContent value="all">
                     <StudentsTable 
                       students={initialStudents} 
+                      prices={initialPrices}
                     />
                   </TabsContent>
                   {studentLevels.map((level) => (
                     <TabsContent key={level} value={level}>
                       <StudentsTable 
                         students={initialStudents.filter(s => s.level === level)} 
+                        prices={initialPrices}
                       />
                     </TabsContent>
                   ))}
@@ -153,7 +174,7 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <GuardiansList students={initialStudents} selectedMonth={'current'}/>
+                <GuardiansList students={initialStudents} selectedMonth={'current'} prices={initialPrices} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -167,24 +188,27 @@ function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Stud
 export default function DashboardPage() {
   const [students, setStudents] = React.useState<Student[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
+  const [prices, setPrices] = React.useState<Prices | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     async function loadData() {
-      const [studentsData, teachersData] = await Promise.all([
+      const [studentsData, teachersData, pricesData] = await Promise.all([
         getStudents(),
         getTeachers(),
+        getPrices(),
       ]);
       setStudents(studentsData);
       setTeachers(teachersData);
+      setPrices(pricesData);
       setLoading(false);
     }
     loadData();
   }, []);
 
-  if (loading) {
+  if (loading || !prices) {
     return <div className="flex items-center justify-center h-screen">Loading dashboard...</div>;
   }
   
-  return <Dashboard initialStudents={students} initialTeachers={teachers} />
+  return <Dashboard initialStudents={students} initialTeachers={teachers} initialPrices={prices} />
 }

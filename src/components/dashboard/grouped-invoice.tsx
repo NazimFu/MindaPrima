@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import type { Student, StudentLevel } from "@/lib/types";
+import type { Student, StudentLevel, Prices } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -10,6 +10,7 @@ import { getPrice } from "@/lib/utils";
 
 type GroupedInvoiceProps = {
   students: Student[];
+  prices: Prices;
 };
 
 type StudentsByLevel = {
@@ -18,7 +19,7 @@ type StudentsByLevel = {
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
 
-export function GroupedInvoice({ students }: GroupedInvoiceProps) {
+export function GroupedInvoice({ students, prices }: GroupedInvoiceProps) {
   const groupedStudents = React.useMemo(() => {
     return students.reduce((acc, student) => {
       const level = student.level;
@@ -44,7 +45,7 @@ export function GroupedInvoice({ students }: GroupedInvoiceProps) {
             const studentsInLevel = groupedStudents[level] || [];
             if (studentsInLevel.length === 0) return null;
 
-            const grandTotal = studentsInLevel.reduce((acc, student) => acc + getPrice(student), 0);
+            const grandTotal = studentsInLevel.reduce((acc, student) => acc + getPrice(student, prices), 0);
 
             return (
               <AccordionItem value={level} key={level}>
@@ -68,7 +69,7 @@ export function GroupedInvoice({ students }: GroupedInvoiceProps) {
                         <TableRow key={student.id}>
                           <TableCell className="font-medium">{student.name}</TableCell>
                           <TableCell>{student.subjects}</TableCell>
-                          <TableCell className="text-right">RM{getPrice(student).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">RM{getPrice(student, prices).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
