@@ -200,7 +200,7 @@ export default function InvoicePage() {
                 </div>
                 <div ref={invoiceRef} className="bg-white p-8 sm:p-12 shadow-lg font-sans">
                     <header className="border-b-4 border-blue-800 pb-4 mb-8 flex justify-between items-start">
-                        <div>
+                        <div className="leading-snug">
                             <h1 className="text-3xl font-bold text-blue-800">Minda Prima</h1>
                             <p>5406A, Jalan Kenari 18</p>
                             <p>Bandar Putra, 81000</p>
@@ -215,13 +215,13 @@ export default function InvoicePage() {
                     <section className="mb-8">
                         <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice [{getInvoiceMonth()}]</h2>
                         <div className="flex justify-between text-sm">
-                            <div>
+                            <div className="leading-snug">
                                 <p><span className="font-semibold">Invoice #</span> {params.id}</p>
                                 <p className="font-semibold mt-4">Customer</p>
                                 <p>{invoiceData.guardianName}</p>
                                 {invoiceData.address.split(',').map((line: string, i: number) => <p key={i}>{line.trim()}</p>)}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right leading-snug">
                                 <p><span className="font-semibold">Invoice Date</span> {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                 <p><span className="font-semibold">Currency</span> MYR</p>
                             </div>
@@ -363,7 +363,7 @@ export default function InvoicePage() {
                                     data-pdf-interactive="true"
                                     data-pdf-prefix="RM"
                                     data-pdf-replacement-class="w-28 text-right font-bold"
-                                />
+                                 />
                             </div>
                              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
                                 <span className="text-xl font-bold">Grand Total</span>
