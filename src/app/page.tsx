@@ -1,11 +1,14 @@
+
+'use client';
+
 import * as React from "react";
-import { PlusCircle, Archive } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { StudentLevel } from "@/lib/types";
+import type { StudentLevel, Student, Teacher } from "@/lib/types";
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { TeachersTable } from "@/components/dashboard/teachers-table";
 import { GuardiansList } from "@/components/dashboard/guardians-list";
@@ -15,12 +18,16 @@ import { TeacherForm } from "@/components/dashboard/teacher-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getStudents, getTeachers } from "@/lib/sheets";
 import { addStudent, addTeacher } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
 
 const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
 
-export default async function DashboardPage() {
-  const students = await getStudents();
-  const teachers = await getTeachers();
+// This is a temporary workaround until Next.js provides a better solution for server-side data fetching in client components.
+// We are fetching the data once and passing it down to the components that need it.
+function Dashboard({ initialStudents, initialTeachers }: { initialStudents: Student[]; initialTeachers: Teacher[] }) {
+  const [isStudentDialogOpen, setStudentDialogOpen] = React.useState(false);
+  const [isTeacherDialogOpen, setTeacherDialogOpen] = React.useState(false);
+  const { toast } = useToast();
 
   return (
     <div className="flex h-screen w-full flex-col bg-muted/40">
@@ -43,7 +50,7 @@ export default async function DashboardPage() {
               <TabsTrigger value="guardians">Guardians</TabsTrigger>
             </TabsList>
             <div className="ml-auto flex items-center gap-2">
-               <Dialog>
+               <Dialog open={isStudentDialogOpen} onOpenChange={setStudentDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="h-8 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -57,14 +64,15 @@ export default async function DashboardPage() {
                     <DialogTitle>Register New Student</DialogTitle>
                   </DialogHeader>
                   <StudentForm
+                    onFormSubmit={() => setStudentDialogOpen(false)}
                     onSubmit={async (data) => {
-                      'use server';
                       await addStudent(data);
+                      toast({ title: "Success", description: "New student has been registered." });
                     }}
                   />
                 </DialogContent>
               </Dialog>
-               <Dialog>
+               <Dialog open={isTeacherDialogOpen} onOpenChange={setTeacherDialogOpen}>
                 <DialogTrigger asChild>
                    <Button size="sm" variant="outline" className="h-8 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -78,9 +86,10 @@ export default async function DashboardPage() {
                     <DialogTitle>Register New Teacher</DialogTitle>
                   </DialogHeader>
                   <TeacherForm
+                    onFormSubmit={() => setTeacherDialogOpen(false)}
                     onSubmit={async (data) => {
-                      'use server';
                       await addTeacher(data);
+                       toast({ title: "Success", description: "New teacher has been registered." });
                     }}
                    />
                 </DialogContent>
@@ -88,7 +97,7 @@ export default async function DashboardPage() {
             </div>
           </div>
           <TabsContent value="overview" className="space-y-4">
-            <OverviewCards students={students} teachers={teachers} />
+            <OverviewCards students={initialStudents} teachers={initialTeachers} />
           </TabsContent>
           <TabsContent value="students">
              <Card>
@@ -106,13 +115,13 @@ export default async function DashboardPage() {
                   </TabsList>
                   <TabsContent value="all">
                     <StudentsTable 
-                      students={students} 
+                      students={initialStudents} 
                     />
                   </TabsContent>
                   {studentLevels.map((level) => (
                     <TabsContent key={level} value={level}>
                       <StudentsTable 
-                        students={students.filter(s => s.level === level)} 
+                        students={initialStudents.filter(s => s.level === level)} 
                       />
                     </TabsContent>
                   ))}
@@ -128,7 +137,7 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <TeachersTable
-                  teachers={teachers}
+                  teachers={initialTeachers}
                 />
               </CardContent>
             </Card>
@@ -142,7 +151,7 @@ export default async function DashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <GuardiansList students={students} selectedMonth={'current'}/>
+                <GuardiansList students={initialStudents} selectedMonth={'current'}/>
               </CardContent>
             </Card>
           </TabsContent>
@@ -150,4 +159,30 @@ export default async function DashboardPage() {
       </main>
     </div>
   );
+}
+
+
+export default function DashboardPage() {
+  const [students, setStudents] = React.useState<Student[]>([]);
+  const [teachers, setTeachers] = React.useState<Teacher[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function loadData() {
+      const [studentsData, teachersData] = await Promise.all([
+        getStudents(),
+        getTeachers(),
+      ]);
+      setStudents(studentsData);
+      setTeachers(teachersData);
+      setLoading(false);
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading dashboard...</div>;
+  }
+  
+  return <Dashboard initialStudents={students} initialTeachers={teachers} />
 }
