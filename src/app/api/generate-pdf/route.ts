@@ -1,6 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+
+// This is a publicly available browser instance hosted by Browserless
+const BROWSERLESS_URL = 'wss://browserless.one/chromium?stealth=true&block_ads=true';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,19 +12,15 @@ export async function POST(req: NextRequest) {
     if (!htmlContent) {
       return NextResponse.json({ error: 'Missing htmlContent' }, { status: 400 });
     }
-
-    // Launch Puppeteer with arguments optimized for server environments
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    
+    const browser = await puppeteer.connect({
+        browserWSEndpoint: BROWSERLESS_URL,
     });
     
     const page = await browser.newPage();
     
-    // Set the content of the page
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     
-    // Generate PDF
     const pdfBuffer = await page.pdf({ 
       format: 'A4',
       printBackground: true,
@@ -35,7 +34,6 @@ export async function POST(req: NextRequest) {
     
     await browser.close();
     
-    // Return the PDF as a blob
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
