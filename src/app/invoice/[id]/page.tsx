@@ -231,7 +231,7 @@ export default function InvoicePage() {
                                         <td className="py-2">{student.name}</td>
                                         <td className="py-2">{student.subjects}</td>
                                         <td className="py-2">{student.firstTime === 'Yes' ? 'NR: RM10' : ''}</td>
-                                        <td className="py-2 text-center">1</td>
+                                        <td className="py-2 text-center">{student.subjects.split(',').map(s => s.trim()).filter(Boolean).length}</td>
                                         <td className="py-2 text-center">
                                             {student.level.includes('Primary') ? `P${student.level.split(' ')[1]}` : `S${student.level.split(' ')[1]}`}
                                         </td>
