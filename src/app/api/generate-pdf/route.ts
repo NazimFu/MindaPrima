@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Proactively load a font to prevent rendering issues in serverless
-    await chromium.font('https://raw.githack.com/googlei18n/noto-cjk/main/NotoSansJP-Regular.otf');
+    await chromium.font('https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/JP/NotoSansJP-Regular.otf');
 
     console.log('Launching serverless browser');
     browser = await core.chromium.launch({
