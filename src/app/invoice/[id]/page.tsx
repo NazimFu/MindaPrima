@@ -180,7 +180,7 @@ export default function InvoicePage() {
                             <p>(+60) 137090363</p>
                         </div>
                         <div className="w-24 h-24">
-                            <Image src="/MPLogo.jpg" alt="Minda Prima Logo" width={100} height={100} data-ai-hint="education logo" />
+                            <Image src="https://picsum.photos/100/100" alt="Minda Prima Logo" width={100} height={100} data-ai-hint="education logo" />
                         </div>
                     </header>
 
