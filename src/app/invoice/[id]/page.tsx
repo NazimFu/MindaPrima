@@ -75,7 +75,7 @@ export default function InvoicePage() {
         const originalFont = input.style.fontFamily;
         input.style.fontFamily = 'sans-serif';
 
-        const elementsToHide = input.querySelectorAll('button, [data-pdf-hide]');
+        const elementsToHide = input.querySelectorAll('[data-pdf-hide]');
         elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
 
         const interactiveElements = Array.from(input.querySelectorAll<HTMLElement>('[data-pdf-interactive]'));
@@ -85,9 +85,11 @@ export default function InvoicePage() {
             let value = '';
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 value = (el as HTMLInputElement | HTMLTextAreaElement).value;
-            } else if (el.dataset.radixSelectTrigger) {
-                // For ShadCN Select, the value is inside a span within the trigger button
+            } else if (el.querySelector('[data-radix-select-trigger]')) { // More specific selector for Select
                 const valueEl = el.querySelector<HTMLSpanElement>('span');
+                if (valueEl) value = valueEl.innerText;
+            } else if (el.hasAttribute('data-radix-select-trigger')) {
+                 const valueEl = el.querySelector<HTMLSpanElement>('span');
                 if (valueEl) value = valueEl.innerText;
             }
             
@@ -99,9 +101,8 @@ export default function InvoicePage() {
             } else {
                 replacement.textContent = value;
             }
-
+            
             el.style.display = 'none';
-            // Insert after the original element to maintain layout flow if needed
             el.parentElement?.insertBefore(replacement, el.nextSibling);
             replacements.push({ original: el, replacement });
         });
@@ -192,7 +193,7 @@ export default function InvoicePage() {
                             Back to Dashboard
                         </Link>
                     </Button>
-                     <Button onClick={handleGeneratePdf}>
+                     <Button onClick={handleGeneratePdf} data-pdf-hide="true">
                         <FileDown className="mr-2 h-4 w-4"/>
                         Generate PDF
                     </Button>
@@ -289,31 +290,31 @@ export default function InvoicePage() {
                                         />
                                     </td>
                                     <td className="p-2">
-                                        <Select
-                                            value={fee.type}
-                                            onValueChange={(value: 'Addition' | 'Deduction') => handleFlexibleFeeChange(index, 'type', value)}
-                                        >
-                                            <SelectTrigger className="h-8 border-gray-300 rounded" data-pdf-interactive="true" data-radix-select-trigger="true">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Addition">Addition</SelectItem>
-                                                <SelectItem value="Deduction">Deduction</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div data-pdf-interactive="true" data-radix-select-trigger="true">
+                                            <Select
+                                                value={fee.type}
+                                                onValueChange={(value: 'Addition' | 'Deduction') => handleFlexibleFeeChange(index, 'type', value)}
+                                            >
+                                                <SelectTrigger className="h-8 border-gray-300 rounded">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Addition">Addition</SelectItem>
+                                                    <SelectItem value="Deduction">Deduction</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </td>
                                     <td className="p-2 text-right">
-                                        <div className="relative">
-                                             <Input 
-                                                type="number" 
-                                                value={fee.amount}
-                                                onChange={(e) => handleFlexibleFeeChange(index, 'amount', e.target.value)}
-                                                className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded"
-                                                data-pdf-interactive="true"
-                                                data-pdf-prefix="RM"
-                                                data-pdf-replacement-class="w-28 text-right"
-                                            />
-                                        </div>
+                                         <Input 
+                                            type="number" 
+                                            value={fee.amount}
+                                            onChange={(e) => handleFlexibleFeeChange(index, 'amount', e.target.value)}
+                                            className="w-28 h-8 text-right pr-2 border-gray-300 rounded"
+                                            data-pdf-interactive="true"
+                                            data-pdf-prefix="RM"
+                                            data-pdf-replacement-class="w-28 text-right"
+                                        />
                                     </td>
                                     <td className="p-2 text-center" data-pdf-hide="true">
                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeFlexibleFeeRow(index)}>
@@ -358,7 +359,7 @@ export default function InvoicePage() {
                                     type="number" 
                                     value={discount} 
                                     onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
-                                    className="w-28 h-8 text-right pr-2 pl-8 border-gray-300 rounded" 
+                                    className="w-28 h-8 text-right pr-2 border-gray-300 rounded" 
                                     data-pdf-interactive="true"
                                     data-pdf-prefix="RM"
                                     data-pdf-replacement-class="w-28 text-right font-bold"
@@ -381,4 +382,5 @@ export default function InvoicePage() {
             </div>
         </div>
     );
-}
+
+    
