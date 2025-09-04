@@ -21,7 +21,7 @@ import { getStudents, getTeachers, addStudent, addTeacher, getPrices } from "@/a
 import { useToast } from "@/hooks/use-toast";
 
 
-const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 5', 'Secondary 6'];
+const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 4', 'Secondary 5', 'Secondary 6'];
 
 function Dashboard({ 
   initialStudents, 

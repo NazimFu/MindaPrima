@@ -78,7 +78,7 @@ export async function getTeachers(): Promise<Teacher[]> {
 const levelShortMap: Record<string, StudentLevel> = {
     'P1': 'Primary 1', 'P2': 'Primary 2', 'P3': 'Primary 3',
     'P4': 'Primary 4', 'P5': 'Primary 5', 'P6': 'Primary 6',
-    'S1': 'Secondary 1', 'S2': 'Secondary 2', 'S3': 'Secondary 3',
+    'S1': 'Secondary 1', 'S2': 'Secondary 2', 'S3': 'Secondary 3', 'S4': 'Secondary 4',
     'S5': 'Secondary 5', 'S6': 'Secondary 6'
 };
 
@@ -93,6 +93,7 @@ export async function getPrices(): Promise<Prices> {
         'Secondary 1': { '1': 50, '2': 90, '3': 130 },
         'Secondary 2': { '1': 50, '2': 90, '3': 130 },
         'Secondary 3': { '1': 50, '2': 90, '3': 130 },
+        'Secondary 4': { '1': 55, '2': 100, '3': 145 },
         'Secondary 5': { '1': 55, '2': 100, '3': 145 },
         'Secondary 6': { '1': 55, '2': 100, '3': 145 },
         transportInbound: 20,
