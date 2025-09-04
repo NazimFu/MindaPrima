@@ -46,20 +46,29 @@ export default function InvoicePage() {
     const invoiceRef = React.useRef<HTMLDivElement>(null);
     
     const [invoiceData, setInvoiceData] = React.useState<any>(null);
-    const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([
-        { description: 'Personal Tuition', details: '1 Person', type: 'Addition', amount: 0 },
-        { description: 'Worksheet', details: 'Once a year (3P)', type: 'Addition', amount: 0 },
-        { description: 'Transport', details: 'Deduct 3 days', type: 'Deduction', amount: 0 },
-    ]);
+    const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([]);
     const [discount, setDiscount] = React.useState(0);
     const [notes, setNotes] = React.useState(
         'T(I): Transport (BP area)\nT(O): Transport (Out of BP)'
     );
 
-    React.useEffect(() => {
+     React.useEffect(() => {
         const data = searchParams.get('data');
         if (data) {
-            setInvoiceData(JSON.parse(data));
+            const parsedData = JSON.parse(data);
+            setInvoiceData(parsedData);
+            
+            const initialFees: FlexibleFee[] = [
+                { description: 'Personal Tuition', details: '1 Person', type: 'Addition', amount: 0 },
+                { description: 'Worksheet', details: 'Once a year (3P)', type: 'Addition', amount: 0 },
+            ];
+
+            const hasFirstTimer = parsedData.children.some((student: Student) => student.firstTime === 'Yes');
+            if (hasFirstTimer) {
+                initialFees.unshift({ description: 'New Registration', details: 'One-time fee', type: 'Addition', amount: 10 });
+            }
+            
+            setFlexibleFees(initialFees);
         }
     }, [searchParams]);
 
@@ -130,7 +139,8 @@ export default function InvoicePage() {
     
     const subtotal = invoiceData.children.reduce((acc: number, student: Student) => acc + getPrice(student, invoiceData.prices), 0);
     const flexibleTotal = flexibleFees.reduce((acc, fee) => {
-        return acc + (fee.amount || 0);
+        const amount = fee.type === 'Addition' ? fee.amount : -fee.amount;
+        return acc + (amount || 0);
     }, 0);
     const grandTotal = subtotal + flexibleTotal - discount;
     
@@ -376,9 +386,3 @@ export default function InvoicePage() {
         </div>
     );
 }
-
-    
-
-    
-
-    
