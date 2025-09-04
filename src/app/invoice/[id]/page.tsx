@@ -167,6 +167,16 @@ export default function InvoicePage() {
         }
         return invoiceData.month.split(' ')[0];
     };
+    
+    const getTransportNote = (student: Student, prices: Prices) => {
+        if (student.transport === 'Yes') {
+            if (student.transportArea === 'Inside Limit') {
+                return `T(I): RM${prices.transportInbound.toFixed(2)}`;
+            }
+            return `T(O): RM${prices.transportOutbound.toFixed(2)}`;
+        }
+        return '';
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
@@ -230,7 +240,7 @@ export default function InvoicePage() {
                                     <tr key={student.id} className="border-b border-gray-200">
                                         <td className="py-2">{student.name}</td>
                                         <td className="py-2">{student.subjects}</td>
-                                        <td className="py-2">{student.firstTime === 'Yes' ? 'NR: RM10' : ''}</td>
+                                        <td className="py-2">{getTransportNote(student, invoiceData.prices)}</td>
                                         <td className="py-2 text-center">{student.subjects.split(',').map(s => s.trim()).filter(Boolean).length}</td>
                                         <td className="py-2 text-center">
                                             {student.level.includes('Primary') ? `P${student.level.split(' ')[1]}` : `S${student.level.split(' ')[1]}`}
@@ -368,5 +378,7 @@ export default function InvoicePage() {
         </div>
     );
 }
+
+    
 
     
