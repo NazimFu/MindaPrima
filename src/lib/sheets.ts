@@ -114,7 +114,8 @@ export async function deleteRow(sheetName: string, key: string, value: string) {
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, auth });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
 
-    if (!sheet?.properties?.sheetId) {
+    // The sheetId can be 0, so we check for null/undefined specifically.
+    if (sheet?.properties?.sheetId === null || sheet?.properties?.sheetId === undefined) {
         throw new Error('Sheet properties not found, cannot delete row.');
     }
     const sheetId = sheet.properties.sheetId;
