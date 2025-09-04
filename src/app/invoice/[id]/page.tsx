@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Student, Prices } from '@/lib/types';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { ArrowLeft, FileDown, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -44,6 +42,7 @@ export default function InvoicePage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const invoiceRef = React.useRef<HTMLDivElement>(null);
+    const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
     
     const [invoiceData, setInvoiceData] = React.useState<any>(null);
     const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([]);
@@ -68,62 +67,96 @@ export default function InvoicePage() {
         }
     }, [searchParams]);
 
-    const handleGeneratePdf = () => {
+    const getRenderedHtml = () => {
         const input = invoiceRef.current;
-        if (!input) return;
+        if (!input) return '';
 
-        const originalFont = input.style.fontFamily;
-        input.style.fontFamily = 'sans-serif';
+        // Clone the node to avoid modifying the live DOM
+        const clone = input.cloneNode(true) as HTMLDivElement;
+        
+        // Remove elements that should not be in the PDF
+        clone.querySelectorAll('[data-pdf-hide="true"]').forEach(el => el.remove());
 
-        const elementsToHide = input.querySelectorAll('[data-pdf-hide]');
-        elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
-
-        const interactiveElements = Array.from(input.querySelectorAll<HTMLElement>('[data-pdf-interactive]'));
-        const replacements: { original: HTMLElement; replacement: HTMLSpanElement }[] = [];
-
+        // Replace interactive elements with static text
+        const interactiveElements = Array.from(clone.querySelectorAll<HTMLElement>('[data-pdf-interactive="true"]'));
         interactiveElements.forEach(el => {
             let value = '';
+            let originalElement: HTMLElement | null = input.querySelector(`[id="${el.id}"], [name="${el.id}"]`);
+            if(!originalElement) {
+                 const originalInteractive = Array.from(input.querySelectorAll<HTMLElement>('[data-pdf-interactive="true"]'));
+                 originalElement = originalInteractive.find(oEl => oEl.outerHTML === el.outerHTML) || null;
+            }
+
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 value = (el as HTMLInputElement | HTMLTextAreaElement).value;
-            } else if (el.querySelector('[data-radix-select-trigger]')) {
-                const valueEl = el.querySelector<HTMLSpanElement>('span');
-                if (valueEl) value = valueEl.innerText;
             } else if (el.hasAttribute('data-radix-select-trigger')) {
                  const valueEl = el.querySelector<HTMLSpanElement>('span');
-                if (valueEl) value = valueEl.innerText;
+                 if(valueEl) value = valueEl.innerText;
             }
-            
+
             const replacement = document.createElement('span');
             replacement.className = el.dataset.pdfReplacementClass || '';
-
+            
             if (el.dataset.pdfPrefix) {
                 replacement.textContent = `${el.dataset.pdfPrefix}${value}`;
             } else {
                 replacement.textContent = value;
             }
-            
-            el.style.display = 'none';
-            el.parentElement?.insertBefore(replacement, el.nextSibling);
-            replacements.push({ original: el, replacement });
+            el.parentNode?.replaceChild(replacement, el);
         });
 
-        html2canvas(input, { scale: 2, useCORS: true })
-            .then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save(`invoice-${params.id}.pdf`);
-            })
-            .finally(() => {
-                input.style.fontFamily = originalFont;
-                elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
-                replacements.forEach(({ original, replacement }) => {
-                    original.style.display = '';
-                    replacement.remove();
-                });
+        const fontLink = `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">`;
+        const style = `<style>body { font-family: 'Inter', sans-serif; }</style>`;
+        
+        return `<html><head>${fontLink}${style}</head><body>${clone.innerHTML}</body></html>`;
+    };
+
+
+    const handleGeneratePdf = async () => {
+        setIsGeneratingPdf(true);
+        const invoiceElement = invoiceRef.current;
+        if (!invoiceElement) {
+            setIsGeneratingPdf(false);
+            return;
+        }
+
+        // Temporarily hide interactive elements from the live view to clone static state
+        const elementsToHide = invoiceElement.querySelectorAll('[data-pdf-hide="true"]');
+        elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'hidden');
+        
+        const htmlContent = getRenderedHtml();
+
+        // Restore visibility
+        elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'visible');
+
+        try {
+            const response = await fetch('/api/generate-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ htmlContent }),
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate PDF');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `invoice-${params.id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            // You can add a user-facing error message here, e.g., using a toast notification
+        } finally {
+            setIsGeneratingPdf(false);
+        }
     };
     
     if (!invoiceData) {
@@ -186,20 +219,20 @@ export default function InvoicePage() {
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
             <div className="max-w-4xl mx-auto">
-                <div className="mb-4 flex justify-between items-center">
+                <div className="mb-4 flex justify-between items-center" data-pdf-hide="true">
                     <Button variant="outline" asChild>
                         <Link href="/">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Dashboard
                         </Link>
                     </Button>
-                     <Button onClick={handleGeneratePdf} data-pdf-hide="true">
+                     <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
                         <FileDown className="mr-2 h-4 w-4"/>
-                        Generate PDF
+                        {isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
                     </Button>
                 </div>
-                <div ref={invoiceRef} className="bg-white p-8 sm:p-12 shadow-lg font-sans">
-                    <header className="border-b-4 border-blue-800 pb-4 mb-8 flex justify-between items-start">
+                <div ref={invoiceRef} className="bg-white p-8 sm:p-12 shadow-lg">
+                    <header className="border-b-4 border-blue-800 pb-4 mb-8 flex justify-between items-start font-sans">
                         <div className="leading-snug">
                             <h1 className="text-3xl font-bold text-blue-800">Minda Prima</h1>
                             <p>5406A, Jalan Kenari 18</p>
@@ -212,7 +245,7 @@ export default function InvoicePage() {
                         </div>
                     </header>
 
-                    <section className="mb-8">
+                    <section className="mb-8 font-sans">
                         <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice [{getInvoiceMonth()}]</h2>
                         <div className="flex justify-between text-sm">
                             <div className="leading-snug">
@@ -228,36 +261,36 @@ export default function InvoicePage() {
                         </div>
                     </section>
                     
-                    <section className="mb-8">
+                    <section className="mb-8 font-sans">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="border-b border-gray-300">
-                                    <th className="py-2 font-bold text-blue-800">Student</th>
-                                    <th className="py-2 font-bold text-blue-800">Subjects</th>
-                                    <th className="py-2 font-bold text-blue-800">Note</th>
-                                    <th className="py-2 font-bold text-blue-800 text-center">Qty</th>
-                                    <th className="py-2 font-bold text-blue-800 text-center">Level</th>
-                                    <th className="py-2 font-bold text-blue-800 text-right">Total price</th>
+                                <tr className="bg-gray-100 border-b border-gray-300">
+                                    <th className="py-2 px-2 font-bold text-blue-800">Student</th>
+                                    <th className="py-2 px-2 font-bold text-blue-800">Subjects</th>
+                                    <th className="py-2 px-2 font-bold text-blue-800">Note</th>
+                                    <th className="py-2 px-2 font-bold text-blue-800 text-center">Qty</th>
+                                    <th className="py-2 px-2 font-bold text-blue-800 text-center">Level</th>
+                                    <th className="py-2 px-2 font-bold text-blue-800 text-right">Total price</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {invoiceData.children.map((student: Student) => (
                                     <tr key={student.id} className="border-b border-gray-200">
-                                        <td className="py-2">{student.name}</td>
-                                        <td className="py-2">{student.subjects}</td>
-                                        <td className="py-2">{getTransportNote(student, invoiceData.prices)}</td>
-                                        <td className="py-2 text-center">{student.subjects.split(',').map(s => s.trim()).filter(Boolean).length}</td>
-                                        <td className="py-2 text-center">
+                                        <td className="py-2 px-2">{student.name}</td>
+                                        <td className="py-2 px-2">{student.subjects}</td>
+                                        <td className="py-2 px-2">{getTransportNote(student, invoiceData.prices)}</td>
+                                        <td className="py-2 px-2 text-center">{student.subjects.split(',').map(s => s.trim()).filter(Boolean).length}</td>
+                                        <td className="py-2 px-2 text-center">
                                             {student.level.includes('Primary') ? `P${student.level.split(' ')[1]}` : `S${student.level.split(' ')[1]}`}
                                         </td>
-                                        <td className="py-2 text-right">RM{getPrice(student, invoiceData.prices).toFixed(2)}</td>
+                                        <td className="py-2 px-2 text-right">RM{getPrice(student, invoiceData.prices).toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </section>
 
-                     <section className="mb-8">
+                     <section className="mb-8 font-sans">
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="bg-blue-800 text-white">
@@ -333,7 +366,7 @@ export default function InvoicePage() {
                         </div>
                     </section>
                     
-                    <section className="mb-8 flex justify-between">
+                    <section className="mb-8 flex justify-between font-sans">
                          <div>
                             <p className="font-bold mb-1">Notes:</p>
                             <Textarea 
@@ -372,7 +405,7 @@ export default function InvoicePage() {
                         </div>
                     </section>
 
-                    <footer className="text-sm text-center pt-4 border-t mt-8">
+                    <footer className="text-sm text-center pt-4 border-t mt-8 font-sans">
                         <p className="font-bold">Additional Details</p>
                         <p>Bank Details: Bank: Maybank Islamic. Account Number: xxxxx-xxxxxx.</p>
                         <p>VAT Registration Number: 100000000. Company Number: 98765432</p>
@@ -382,6 +415,4 @@ export default function InvoicePage() {
             </div>
         </div>
     );
-
-    
 }
