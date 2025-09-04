@@ -1,3 +1,4 @@
+
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
@@ -5,3 +6,25 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+# A list of packages to install on the instance. This can be used to install
+# system-level dependencies.
+packages:
+  - libglib2.0-0
+  - libnspr4
+  - libnss3
+  - libdbus-1-3
+  - libatk1.0-0
+  - libatk-bridge2.0-0
+  - libexpat1
+  - libasound2
+  - libx11-6
+  - libxcomposite1
+  - libxdamage1
+  - libxext6
+  - libxfixes3
+  - libxrandr2
+  - libgbm1
+  - libxcb1
+  - libxkbcommon0
+  - libudev1

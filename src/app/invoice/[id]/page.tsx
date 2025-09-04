@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Student, Prices } from '@/lib/types';
 import { ArrowLeft, FileDown, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getPrice = (student: Student, prices: Prices) => {
@@ -48,7 +47,8 @@ export default function InvoicePage() {
     const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([]);
     const [discount, setDiscount] = React.useState(0);
     const [notes, setNotes] = React.useState(
-        'T(I): Transport (BP area)\nT(O): Transport (Out of BP)'
+        'T(I): Transport (BP area)\
+T(O): Transport (Out of BP)'
     );
 
      React.useEffect(() => {
@@ -71,40 +71,24 @@ export default function InvoicePage() {
         const input = invoiceRef.current;
         if (!input) return '';
 
-        // Clone the node to avoid modifying the live DOM
         const clone = input.cloneNode(true) as HTMLDivElement;
+
+        // Replace interactive elements with their static values.
+        const inputs = Array.from(clone.querySelectorAll('input, textarea'));
+        inputs.forEach(input => {
+            const el = input as HTMLInputElement | HTMLTextAreaElement;
+            el.outerHTML = `<span class="${el.className}">${el.value}</span>`;
+        });
         
-        // Remove elements that should not be in the PDF
-        clone.querySelectorAll('[data-pdf-hide="true"]').forEach(el => el.remove());
-
-        // Replace interactive elements with static text
-        const interactiveElements = Array.from(clone.querySelectorAll<HTMLElement>('[data-pdf-interactive="true"]'));
-        interactiveElements.forEach(el => {
-            let value = '';
-            let originalElement: HTMLElement | null = input.querySelector(`[id="${el.id}"], [name="${el.id}"]`);
-            if(!originalElement) {
-                 const originalInteractive = Array.from(input.querySelectorAll<HTMLElement>('[data-pdf-interactive="true"]'));
-                 originalElement = originalInteractive.find(oEl => oEl.outerHTML === el.outerHTML) || null;
-            }
-
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                value = (el as HTMLInputElement | HTMLTextAreaElement).value;
-            } else if (el.hasAttribute('data-radix-select-trigger')) {
-                 const valueEl = el.querySelector<HTMLSpanElement>('span');
-                 if(valueEl) value = valueEl.innerText;
-            }
-
-            const replacement = document.createElement('span');
-            replacement.className = el.dataset.pdfReplacementClass || '';
-            
-            if (el.dataset.pdfPrefix) {
-                replacement.textContent = `${el.dataset.pdfPrefix}${value}`;
-            } else {
-                replacement.textContent = value;
-            }
-            el.parentNode?.replaceChild(replacement, el);
+        const selects = Array.from(clone.querySelectorAll('[data-radix-select-trigger="true"]'));
+        selects.forEach(select => {
+            const el = select as HTMLElement;
+            const valueEl = el.querySelector<HTMLSpanElement>('span');
+            el.outerHTML = `<span class="${el.className}">${valueEl ? valueEl.innerText : ''}</span>`;
         });
 
+        clone.querySelectorAll('[data-pdf-hide="true"]').forEach(el => el.remove());
+        
         const fontLink = `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">`;
         const style = `<style>body { font-family: 'Inter', sans-serif; }</style>`;
         
@@ -114,20 +98,7 @@ export default function InvoicePage() {
 
     const handleGeneratePdf = async () => {
         setIsGeneratingPdf(true);
-        const invoiceElement = invoiceRef.current;
-        if (!invoiceElement) {
-            setIsGeneratingPdf(false);
-            return;
-        }
-
-        // Temporarily hide interactive elements from the live view to clone static state
-        const elementsToHide = invoiceElement.querySelectorAll('[data-pdf-hide="true"]');
-        elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'hidden');
-        
         const htmlContent = getRenderedHtml();
-
-        // Restore visibility
-        elementsToHide.forEach(el => (el as HTMLElement).style.visibility = 'visible');
 
         try {
             const response = await fetch('/api/generate-pdf', {
@@ -138,7 +109,7 @@ export default function InvoicePage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to generate PDF');
+                throw new Error(errorData.details || errorData.error || 'Failed to generate PDF');
             }
 
             const blob = await response.blob();
@@ -241,7 +212,7 @@ export default function InvoicePage() {
                             <p>(+60) 137090363</p>
                         </div>
                         <div className="w-24 h-24">
-                            <Image src="https://picsum.photos/100/100" alt="Minda Prima Logo" width={100} height={100} data-ai-hint="education logo" />
+                            <img src="/MPLogo.jpg" alt="Minda Prima Logo" width={100} height={100} data-ai-hint="education logo" />
                         </div>
                     </header>
 
