@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import type { sheets_v4 } from 'googleapis';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -30,7 +31,7 @@ async function getSpreadsheet() {
     };
 }
 
-export async function getSheet(sheetName: string) {
+export async function getSheet(sheetName: string): Promise<sheets_v4.Schema$Sheet | undefined> {
     const { spreadsheetId, auth } = await getSpreadsheet();
     const response = await sheets.spreadsheets.get({
         spreadsheetId,

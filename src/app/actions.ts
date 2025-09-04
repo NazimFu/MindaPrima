@@ -113,6 +113,9 @@ export async function updateStudent(student: Student) {
 
 export async function updateStudentStatus(studentId: string, status: PaymentStatus) {
     const sheet = await getSheet(STUDENT_SHEET_NAME);
+    if (!sheet) {
+        throw new Error('Student sheet not found');
+    }
     const rows = await getSheetData(sheet);
     const rowIndex = rows.findIndex(row => row[0] === studentId);
 
