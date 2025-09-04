@@ -34,23 +34,29 @@ async function getSpreadsheet() {
 
 export async function getSheet(sheetName: string): Promise<sheets_v4.Schema$Sheet | undefined> {
     const { spreadsheetId, auth } = await getSpreadsheet();
-    const response = await sheets.spreadsheets.get({
-        spreadsheetId,
-        auth,
-    });
-    const sheet = response.data.sheets?.find(s => s.properties?.title === sheetName);
-    return sheet;
+    try {
+        const response = await sheets.spreadsheets.get({
+            spreadsheetId,
+            auth,
+        });
+        const sheet = response.data.sheets?.find(s => s.properties?.title === sheetName);
+        return sheet;
+    } catch (error) {
+        console.error(`Error fetching sheet "${sheetName}":`, error);
+        return undefined;
+    }
 }
 
-export async function getSheetData(sheet: any) {
+export async function getSheetData(sheet: sheets_v4.Schema$Sheet) {
     const { spreadsheetId, auth } = await getSpreadsheet();
     if (!sheet?.properties?.title) {
-        throw new Error('Sheet not found');
+        throw new Error('Sheet properties not found or title is missing');
     }
+    const range = sheet.properties.title;
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
         auth,
-        range: sheet.properties.title,
+        range,
     });
     return response.data.values?.slice(1) || []; // Skip header row
 }
@@ -58,6 +64,7 @@ export async function getSheetData(sheet: any) {
 async function findRowIndex(sheetName: string, key: string, value: string): Promise<number> {
     const sheet = await getSheet(sheetName);
     if (!sheet) return -1;
+
     const data = await getSheetData(sheet);
     const header = sheetName === STUDENT_SHEET_NAME ? STUDENT_HEADER : TEACHER_HEADER;
     const colIndex = header.indexOf(key);
@@ -66,7 +73,6 @@ async function findRowIndex(sheetName: string, key: string, value: string): Prom
     const rowIndex = data.findIndex(row => row[colIndex] === value);
     return rowIndex !== -1 ? rowIndex + 2 : -1; // +2 because sheets are 1-based and we have a header
 }
-
 
 export async function addRow(sheetName: string, rowData: any[]) {
     const { spreadsheetId, auth } = await getSpreadsheet();
@@ -101,18 +107,16 @@ export async function updateRow(sheetName: string, key: string, value: string, r
 export async function deleteRow(sheetName: string, key: string, value: string) {
     const { spreadsheetId, auth } = await getSpreadsheet();
 
-    // First, find the row index to delete
     const rowIndex = await findRowIndex(sheetName, key, value);
     if (rowIndex === -1) {
         throw new Error('Row not found for deletion');
     }
-
-    // Then, get all sheets to find the sheetId
+    
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId, auth });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
 
     if (!sheet?.properties?.sheetId) {
-        throw new Error('Sheet properties not found');
+        throw new Error('Sheet properties not found, cannot delete row.');
     }
     const sheetId = sheet.properties.sheetId;
 
