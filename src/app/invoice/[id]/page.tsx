@@ -85,7 +85,7 @@ export default function InvoicePage() {
             let value = '';
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 value = (el as HTMLInputElement | HTMLTextAreaElement).value;
-            } else if (el.querySelector('[data-radix-select-trigger]')) { // More specific selector for Select
+            } else if (el.querySelector('[data-radix-select-trigger]')) {
                 const valueEl = el.querySelector<HTMLSpanElement>('span');
                 if (valueEl) value = valueEl.innerText;
             } else if (el.hasAttribute('data-radix-select-trigger')) {
@@ -384,3 +384,4 @@ export default function InvoicePage() {
     );
 
     
+}
