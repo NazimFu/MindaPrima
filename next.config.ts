@@ -1,4 +1,5 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -24,6 +25,19 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  turbopack: {
+    root: __dirname,
+    resolveAlias: {
+      '@': path.join(__dirname, 'src'),
+    }
+  },
+  // Add webpack configuration to ignore punycode warnings
+  webpack: (config, { isServer }) => {
+    config.ignoreWarnings = [
+      { module: /node_modules\/punycode/ }
+    ];
+    return config;
+  }
 };
 
 export default nextConfig;
