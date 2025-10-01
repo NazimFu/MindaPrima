@@ -41,10 +41,7 @@ function Dashboard({
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-4">
         <Logo />
         <div className="ml-auto flex items-center gap-4">
-           <Avatar>
-              <AvatarImage src="https://placehold.co/32x32.png" alt="User" data-ai-hint="user avatar" />
-              <AvatarFallback>AD</AvatarFallback>
-            </Avatar>
+           
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 overflow-y-scroll">

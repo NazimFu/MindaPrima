@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -12,6 +11,7 @@ import html2canvas from 'html2canvas';
 import { ArrowLeft, FileDown, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getPrice = (student: Student, prices: Prices) => {
@@ -206,13 +206,23 @@ export default function InvoicePage() {
                             <p>Kulai, Johor</p>
                             <p>(+60) 137090363</p>
                         </div>
-                        <div className="w-24 h-24">
-                            <Image src="https://picsum.photos/100/100" alt="Minda Prima Logo" width={100} height={100} data-ai-hint="education logo" />
+                        {/* Updated image container with square aspect ratio */}
+                        <div className="w-[150px] h-[150px] relative">
+                            <Image 
+                                src="/images/MP-LOGO.png"
+                                alt="Minda Prima Logo"
+                                fill
+                                priority
+                                className="object-contain"
+                                sizes="150px"
+                            />
                         </div>
                     </header>
 
+                    
+
                     <section className="mb-8">
-                        <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice [{getInvoiceMonth()}]</h2>
+                        <h2 className="text-4xl font-bold text-blue-800 mb-4">Invoice {getInvoiceMonth()}</h2>
                         <div className="flex justify-between text-sm">
                             <div>
                                 <p><span className="font-semibold">Invoice #</span> {params.id}</p>
