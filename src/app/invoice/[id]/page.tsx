@@ -34,7 +34,7 @@ const calcPrice = (student: Student, prices: Prices): number => {
 };
 
 // ---------------------------------------------------------------------------
-// PDF builder — returns a Blob without triggering a download
+// PDF builder — crops to exact content height, then fits to A4 width
 // ---------------------------------------------------------------------------
 
 async function buildPdfBlob(
@@ -44,9 +44,11 @@ async function buildPdfBlob(
   const originalFont = container.style.fontFamily;
   container.style.fontFamily = 'sans-serif';
 
+  // Hide interactive UI elements during capture
   const toHide = container.querySelectorAll<HTMLElement>('button, [data-pdf-hide]');
   toHide.forEach(el => { el.style.display = 'none'; });
 
+  // Replace interactive inputs/selects with plain text spans
   const interactive = Array.from(
     container.querySelectorAll<HTMLElement>('[data-pdf-interactive]')
   );
@@ -69,12 +71,54 @@ async function buildPdfBlob(
   });
 
   try {
-    const canvas = await html2canvas(container, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
+    // ── Render at 2× for sharpness ──────────────────────────────────────
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      // Do NOT pass a fixed width/height — let html2canvas measure the
+      // actual rendered content so we capture exactly what is visible.
+    });
+
+    const A4_WIDTH_MM  = 210;
+    const A4_HEIGHT_MM = 297;
+
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const w = pdf.internal.pageSize.getWidth();
-    const h = (canvas.height * w) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+
+    // Image dimensions in mm: stretch to fill A4 width exactly.
+    const imgWidthMM  = A4_WIDTH_MM;
+    const imgHeightMM = (canvas.height * A4_WIDTH_MM) / canvas.width;
+
+    const imgData = canvas.toDataURL('image/png');
+
+    if (imgHeightMM <= A4_HEIGHT_MM) {
+      // Content fits on one page — place it at the top, no blank gap.
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidthMM, imgHeightMM);
+    } else {
+      // Content taller than A4 — tile across multiple pages.
+      const pageHeightPx  = (canvas.width * A4_HEIGHT_MM) / A4_WIDTH_MM;
+      let   remainingPx   = canvas.height;
+      let   sourceY       = 0;
+
+      while (remainingPx > 0) {
+        const slicePx = Math.min(pageHeightPx, remainingPx);
+
+        // Slice the canvas vertically
+        const sliceCanvas  = document.createElement('canvas');
+        sliceCanvas.width  = canvas.width;
+        sliceCanvas.height = Math.ceil(slicePx);
+        const ctx = sliceCanvas.getContext('2d')!;
+        ctx.drawImage(canvas, 0, sourceY, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+
+        const sliceData     = sliceCanvas.toDataURL('image/png');
+        const sliceHeightMM = (slicePx * A4_WIDTH_MM) / canvas.width;
+        pdf.addImage(sliceData, 'PNG', 0, 0, imgWidthMM, sliceHeightMM);
+
+        remainingPx -= slicePx;
+        sourceY     += slicePx;
+        if (remainingPx > 0) pdf.addPage();
+      }
+    }
+
     return pdf.output('blob');
   } finally {
     container.style.fontFamily = originalFont;
@@ -87,9 +131,7 @@ async function buildPdfBlob(
 }
 
 // ---------------------------------------------------------------------------
-// WhatsApp sender -- POSTs to the server API route (whatsapp-web.js).
-// Personal phone number, no access token required.
-// Client must be connected first via /whatsapp-setup.
+// WhatsApp sender
 // ---------------------------------------------------------------------------
 
 async function sendWhatsAppPdf(opts: {
@@ -146,15 +188,15 @@ export default function InvoicePage() {
   const searchParams = useSearchParams();
   const invoiceRef   = React.useRef<HTMLDivElement>(null);
 
-  const [invoiceData,   setInvoiceData]   = React.useState<any>(null);
-  const [flexibleFees,  setFlexibleFees]  = React.useState<FlexibleFee[]>([]);
-  const [discount,      setDiscount]      = React.useState(0);
-  const [notes,         setNotes]         = React.useState(
+  const [invoiceData,  setInvoiceData]  = React.useState<any>(null);
+  const [flexibleFees, setFlexibleFees] = React.useState<FlexibleFee[]>([]);
+  const [discount,     setDiscount]     = React.useState(0);
+  const [notes,        setNotes]        = React.useState(
     'T(I): Transport (Bandar Putra area)\nT(O): Transport (Outside limit)'
   );
-  const [waState,       setWaState]       = React.useState<WaState>('idle');
-  const [waError,       setWaError]       = React.useState('');
-  const [pdfBusy,       setPdfBusy]       = React.useState(false);
+  const [waState,  setWaState]  = React.useState<WaState>('idle');
+  const [waError,  setWaError]  = React.useState('');
+  const [pdfBusy,  setPdfBusy]  = React.useState(false);
 
   React.useEffect(() => {
     const data = searchParams.get('data');
@@ -184,14 +226,27 @@ export default function InvoicePage() {
 
   const grandTotal = subtotal + flexibleTotal - discount;
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
-
-  const getInvoiceMonth = (): string => {
+  // ── Invoice month label ──────────────────────────────────────────────────
+  // invoiceData.month is either "current" or "Month YYYY" (e.g. "March 2025")
+  const getInvoiceMonthLabel = (): string => {
     if (!invoiceData?.month) return '';
-    if (invoiceData.month === 'current')
-      return new Date().toLocaleString('default', { month: 'long' });
-    return invoiceData.month.split(' ')[0];
+    if (invoiceData.month === 'current') {
+      return new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    }
+    // Already a full "Month YYYY" string from the navigator
+    return invoiceData.month;
   };
+
+  // Short month for WhatsApp caption (just "March" or "March 2025")
+  const getInvoiceMonthShort = (): string => {
+    if (!invoiceData?.month) return '';
+    if (invoiceData.month === 'current') {
+      return new Date().toLocaleString('default', { month: 'long' });
+    }
+    return invoiceData.month; // "March 2025"
+  };
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
 
   const getTransportNote = (student: Student, prices: Prices): string => {
     if (student.transport !== 'Yes') return '';
@@ -220,7 +275,7 @@ export default function InvoicePage() {
       const blob = await buildPdfBlob(invoiceRef.current, params.id as string);
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href = url;
+      a.href     = url;
       a.download = `invoice-${params.id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
@@ -232,8 +287,6 @@ export default function InvoicePage() {
   const handleSendWhatsApp = async () => {
     if (!invoiceRef.current || !invoiceData) return;
 
-    // Phone number stored as +60xxxxxxxx (normalised by the student form).
-    // Fall back to the first child's guardianContact for legacy records.
     const rawNumber: string =
       invoiceData.contact ||
       (invoiceData.children as Student[])[0]?.guardianContact ||
@@ -251,11 +304,11 @@ export default function InvoicePage() {
     try {
       const pdfBlob = await buildPdfBlob(invoiceRef.current, params.id as string);
       await sendWhatsAppPdf({
-        toNumber: rawNumber,
+        toNumber:     rawNumber,
         guardianName: invoiceData.guardianName,
-        invoiceMonth: getInvoiceMonth(),
+        invoiceMonth: getInvoiceMonthShort(),
         grandTotal,
-        invoiceId: params.id as string,
+        invoiceId:    params.id as string,
         pdfBlob,
       });
       setWaState('success');
@@ -276,6 +329,8 @@ export default function InvoicePage() {
       </div>
     );
   }
+
+  const invoiceMonthLabel = getInvoiceMonthLabel();
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -303,9 +358,9 @@ export default function InvoicePage() {
               : 'border-[hsl(168,60%,48%/0.4)] text-[hsl(168,60%,55%)] hover:bg-[hsl(168,60%,48%/0.08)]'
             }`}
           >
-            {waState === 'loading' && <Loader2      className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-            {waState === 'success' && <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
-            {waState === 'error'   && <XCircle      className="h-3.5 w-3.5 mr-1.5" />}
+            {waState === 'loading' && <Loader2       className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+            {waState === 'success' && <CheckCircle2  className="h-3.5 w-3.5 mr-1.5" />}
+            {waState === 'error'   && <XCircle       className="h-3.5 w-3.5 mr-1.5" />}
             {waState === 'idle'    && <MessageCircle className="h-3.5 w-3.5 mr-1.5" />}
             {waState === 'loading' ? 'Sending…'
               : waState === 'success' ? 'Sent!'
@@ -335,9 +390,18 @@ export default function InvoicePage() {
         </div>
       )}
 
-      {/* Invoice document */}
+      {/* ── Invoice document ───────────────────────────────────────────────
+          Key rule for zero white-gap PDF:
+          • The outer wrapper has NO padding-bottom and NO min-height.
+          • The content stacks naturally; html2canvas will capture exactly
+            what is rendered — no extra whitespace below the footer.
+      ─────────────────────────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto">
-        <div ref={invoiceRef} className="bg-white text-gray-900 shadow-2xl" style={{ fontFamily: 'Arial, sans-serif' }}>
+        <div
+          ref={invoiceRef}
+          className="bg-white text-gray-900 shadow-2xl"
+          style={{ fontFamily: 'Arial, sans-serif' }}
+        >
 
           {/* Header */}
           <div className="bg-[#1a2332] px-10 py-8 flex justify-between items-start">
@@ -360,13 +424,14 @@ export default function InvoicePage() {
           <div className="h-1 bg-gradient-to-r from-[#f5c842] via-[#e8b830] to-[#f5c842]" />
 
           <div className="px-10 py-8">
-            {/* Meta */}
+            {/* Meta row — Invoice title + month/year + invoice number + date */}
             <div className="flex justify-between items-start mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-[#1a2332] mb-1" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
                   Invoice
                 </h2>
-                <p className="text-xl text-[#f5c842] font-semibold">{getInvoiceMonth()}</p>
+                {/* Month + Year prominently displayed */}
+                <p className="text-xl text-[#f5c842] font-semibold">{invoiceMonthLabel}</p>
               </div>
               <div className="text-right text-sm">
                 <div className="mb-2">
@@ -391,7 +456,7 @@ export default function InvoicePage() {
               ))}
             </div>
 
-            {/* Students */}
+            {/* Students table */}
             <table className="w-full text-sm mb-6">
               <thead>
                 <tr className="bg-[#1a2332] text-white">
@@ -531,8 +596,8 @@ export default function InvoicePage() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="bg-[#1a2332] px-10 py-6 mt-4">
+          {/* Footer — sits flush at the bottom of the content, no trailing gap */}
+          <div className="bg-[#1a2332] px-10 py-6">
             <div className="h-px bg-[#f5c842]/30 mb-4" />
             <div className="text-center text-xs text-gray-400 space-y-1">
               <p className="text-white font-medium">Bank Details: Maybank Islamic · Account: xxxxx-xxxxxx</p>
@@ -541,7 +606,7 @@ export default function InvoicePage() {
             </div>
           </div>
 
-        </div>
+        </div>{/* /invoiceRef */}
       </div>
     </div>
   );
