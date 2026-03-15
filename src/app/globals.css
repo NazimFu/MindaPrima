@@ -6,7 +6,6 @@
 
 @layer base {
   :root {
-    /* Dark slate professional theme */
     --background: 220 15% 9%;
     --foreground: 38 15% 92%;
     --card: 220 14% 12%;
@@ -28,14 +27,12 @@
     --ring: 38 85% 58%;
     --radius: 0.375rem;
 
-    /* Chart colors */
     --chart-1: 38 85% 58%;
     --chart-2: 168 60% 48%;
     --chart-3: 210 70% 60%;
     --chart-4: 280 55% 65%;
     --chart-5: 340 70% 60%;
 
-    /* Sidebar */
     --sidebar-background: 220 18% 7%;
     --sidebar-foreground: 38 15% 85%;
     --sidebar-primary: 38 85% 58%;
@@ -45,7 +42,6 @@
     --sidebar-border: 220 14% 14%;
     --sidebar-ring: 38 85% 58%;
 
-    /* Custom design tokens */
     --gold: 38 85% 58%;
     --gold-dim: 38 60% 42%;
     --surface-1: 220 14% 12%;
@@ -55,21 +51,19 @@
     --text-secondary: 220 8% 60%;
     --text-dim: 220 6% 40%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
-  
+
   html {
-    @apply bg-[hsl(var(--background))];
+    @apply bg-background;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
   }
 
   body {
-    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    @apply bg-background text-foreground;
     font-family: 'DM Sans', system-ui, sans-serif;
     font-optical-sizing: auto;
   }
@@ -99,7 +93,7 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(ellipse 80% 50% at 20% -10%, hsla(38, 70%, 45%, 0.06) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 110%, hsla(210, 70%, 40%, 0.04) 0%, transparent 60%);
   pointer-events: none;
@@ -111,7 +105,7 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: 
+  background-image:
     linear-gradient(hsl(var(--border) / 0.15) 1px, transparent 1px),
     linear-gradient(90deg, hsl(var(--border) / 0.15) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -126,25 +120,14 @@ body::after {
   z-index: 1;
 }
 
-/* Gold shimmer animation */
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 0 0 hsla(38, 85%, 58%, 0); }
-  50% { box-shadow: 0 0 0 4px hsla(38, 85%, 58%, 0.15); }
+  to   { opacity: 1; }
 }
 
 .animate-fade-up {
@@ -178,7 +161,7 @@ body::after {
   box-shadow: 0 8px 32px -8px hsl(var(--background));
 }
 
-/* Status badge glow */
+/* Status badge styles */
 .badge-paid {
   background: hsla(168, 60%, 48%, 0.12);
   color: hsl(168, 60%, 55%);
@@ -197,7 +180,7 @@ body::after {
 
 /* Table row hover */
 .table-row-hover:hover {
-  background: hsl(var(--surface-2) / 0.6);
+  background: hsl(var(--muted) / 0.6);
 }
 
 /* Custom input focus ring */
