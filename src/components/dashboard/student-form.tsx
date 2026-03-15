@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -14,29 +13,47 @@ import type { Student, StudentLevel, TransportArea } from "@/lib/types";
 import { DialogClose } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-const studentLevels: StudentLevel[] = ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 4', 'Secondary 5', 'Secondary 6'];
+const studentLevels: StudentLevel[] = [
+  'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6',
+  'Secondary 1', 'Secondary 2', 'Secondary 3', 'Secondary 4', 'Secondary 5', 'Secondary 6',
+];
+
+/**
+ * Normalise a Malaysian phone number to E.164 (+60...) format.
+ *
+ * Rules:
+ *  - Strip all non-digit characters (spaces, dashes, brackets).
+ *  - If it already starts with "60", prepend "+".
+ *  - If it starts with "0", replace the leading "0" with "+60".
+ *  - Otherwise (bare number like "12345678"), prepend "+60".
+ */
+function normalizeMY(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('60')) return `+${digits}`;
+  if (digits.startsWith('0')) return `+60${digits.slice(1)}`;
+  return `+60${digits}`;
+}
 
 const studentFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  level: z.enum(studentLevels),
+  level: z.enum(studentLevels as [StudentLevel, ...StudentLevel[]]),
   subjects: z.string().min(3, "Please list at least one subject."),
   guardian: z.string().min(2, "Guardian's name is required."),
-  guardianContact: z.string().min(10, "A valid contact number is required."),
+  guardianContact: z.string().min(8, "A valid contact number is required."),
   address: z.string().min(10, "Address is required."),
   firstTime: z.enum(['Yes', 'No']),
   transport: z.enum(['Yes', 'No']),
   transportArea: z.enum(['Inside Limit', 'Outside Limit', 'N/A']).optional(),
   hasSibling: z.enum(['Yes', 'No']),
 }).refine(data => {
-    if (data.transport === 'Yes') {
-      return data.transportArea && data.transportArea !== 'N/A';
-    }
-    return true;
-  }, {
-    message: "Transport area is required.",
-    path: ["transportArea"],
+  if (data.transport === 'Yes') {
+    return data.transportArea && data.transportArea !== 'N/A';
   }
-);
+  return true;
+}, {
+  message: "Transport area is required.",
+  path: ["transportArea"],
+});
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
 
@@ -50,21 +67,26 @@ type StudentFormProps = {
 export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: StudentFormProps) {
   const [isPending, startTransition] = React.useTransition();
   const [siblingLevelFilter, setSiblingLevelFilter] = React.useState<StudentLevel | 'all'>('all');
-  
+
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
-    defaultValues: initialData || {
-      name: "",
-      level: "Primary 1",
-      subjects: "",
-      guardian: "",
-      guardianContact: "",
-      address: "",
-      firstTime: "Yes",
-      transport: "No",
-      transportArea: "N/A",
-      hasSibling: "No",
-    },
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          hasSibling: 'No',
+        }
+      : {
+          name: "",
+          level: "Primary 1",
+          subjects: "",
+          guardian: "",
+          guardianContact: "",
+          address: "",
+          firstTime: "Yes",
+          transport: "No",
+          transportArea: "N/A",
+          hasSibling: "No",
+        },
   });
 
   const transportValue = form.watch("transport");
@@ -72,13 +94,13 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
 
   const handleFormSubmit = (values: StudentFormValues) => {
     startTransition(() => {
-        onSubmit({
-          ...values,
-          transportArea: values.transport === 'No' ? 'N/A' : values.transportArea as TransportArea,
-        });
-        if (onFormSubmit) {
-            onFormSubmit();
-        }
+      onSubmit({
+        ...values,
+        // Normalise phone before saving
+        guardianContact: normalizeMY(values.guardianContact),
+        transportArea: values.transport === 'No' ? 'N/A' : (values.transportArea as TransportArea),
+      });
+      if (onFormSubmit) onFormSubmit();
     });
   };
 
@@ -92,28 +114,26 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
   };
 
   const filteredSiblings = React.useMemo(() => {
-    if (siblingLevelFilter === 'all') {
-      return students;
-    }
+    if (siblingLevelFilter === 'all') return students;
     return students.filter(s => s.level === siblingLevelFilter);
   }, [students, siblingLevelFilter]);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+        
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Full Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John Doe" {...field} />
-              </FormControl>
+              <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="firstTime"
@@ -122,9 +142,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
               <FormLabel>First Time Registration</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an option" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select an option" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="Yes">Yes</SelectItem>
@@ -135,6 +153,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
             </FormItem>
           )}
         />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -144,9 +163,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
                 <FormLabel>Level</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a level" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {studentLevels.map(level => (
@@ -158,6 +175,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="transport"
@@ -166,9 +184,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
                 <FormLabel>Transport Required</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an option" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select an option" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="Yes">Yes</SelectItem>
@@ -182,7 +198,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
         </div>
 
         {transportValue === 'Yes' && (
-           <FormField
+          <FormField
             control={form.control}
             name="transportArea"
             render={({ field }) => (
@@ -190,9 +206,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
                 <FormLabel>Transport Area</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select area" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select area" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="Inside Limit">Inside Limit</SelectItem>
@@ -204,16 +218,14 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
             )}
           />
         )}
-        
+
         <FormField
           control={form.control}
           name="subjects"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Subjects</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Mathematics, Science" {...field} />
-              </FormControl>
+              <FormControl><Input placeholder="e.g., Mathematics, Science" {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -232,15 +244,11 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
                   className="flex items-center space-x-4"
                 >
                   <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="Yes" />
-                    </FormControl>
+                    <FormControl><RadioGroupItem value="Yes" /></FormControl>
                     <FormLabel className="font-normal">Yes</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="No" />
-                    </FormControl>
+                    <FormControl><RadioGroupItem value="No" /></FormControl>
                     <FormLabel className="font-normal">No</FormLabel>
                   </FormItem>
                 </RadioGroup>
@@ -254,28 +262,29 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
           <div className="p-4 border rounded-md bg-muted/50 space-y-4">
             <h4 className="font-medium">Find Sibling</h4>
             <div className="grid grid-cols-2 gap-4">
-               <FormItem>
+              <FormItem>
                 <FormLabel>Filter by Level</FormLabel>
-                 <Select onValueChange={(value: StudentLevel | 'all') => setSiblingLevelFilter(value)} defaultValue={siblingLevelFilter}>
+                <Select
+                  onValueChange={(value: StudentLevel | 'all') => setSiblingLevelFilter(value)}
+                  defaultValue={siblingLevelFilter}
+                >
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a level" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="all">All Levels</SelectItem>
-                     {studentLevels.map(level => (
+                    {studentLevels.map(level => (
                       <SelectItem key={level} value={level}>{level}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </FormItem>
-               <FormItem>
+              <FormItem>
                 <FormLabel>Select Sibling</FormLabel>
-                 <Select onValueChange={handleSiblingSelect} disabled={filteredSiblings.length === 0}>
+                <Select onValueChange={handleSiblingSelect} disabled={filteredSiblings.length === 0}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={filteredSiblings.length > 0 ? "Select a student" : "No students in level"}/>
+                      <SelectValue placeholder={filteredSiblings.length > 0 ? "Select a student" : "No students in level"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -296,9 +305,7 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Guardian's Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Jane Doe" {...field} />
-                </FormControl>
+                <FormControl><Input placeholder="Jane Doe" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -310,13 +317,34 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
               <FormItem>
                 <FormLabel>Guardian's Contact</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., 012-3456789" {...field} />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none select-none">
+                      +60
+                    </span>
+                    <Input
+                      placeholder="12-3456789"
+                      {...field}
+                      className="pl-12"
+                      // Strip the +60 prefix for display so the user only
+                      // sees/edits the local portion while the stored value
+                      // always holds the full E.164 number.
+                      value={
+                        field.value.startsWith('+60')
+                          ? field.value.slice(3)
+                          : field.value.startsWith('60')
+                          ? field.value.slice(2)
+                          : field.value
+                      }
+                      onChange={e => field.onChange(e.target.value)}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
         <FormField
           control={form.control}
           name="address"
@@ -324,19 +352,20 @@ export function StudentForm({ onSubmit, initialData, onFormSubmit, students }: S
             <FormItem>
               <FormLabel>Address</FormLabel>
               <FormControl>
-                <Textarea placeholder="123 Main St, Anytown, USA" {...field} />
+                <Textarea placeholder="123 Main St, Anytown" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <div className="flex justify-end gap-2 pt-4">
-            <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving...' : (initialData ? 'Update Student' : 'Add Student')}
-            </Button>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Saving…' : (initialData ? 'Update Student' : 'Add Student')}
+          </Button>
         </div>
       </form>
     </Form>

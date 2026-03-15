@@ -49,6 +49,8 @@
     "lucide-react": "^0.475.0",
     "next": "^15.5.4",
     "patch-package": "^8.0.0",
+    "puppeteer": "^24.39.1",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -57,11 +59,13 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "tr46": "^6.0.0",
+    "whatsapp-web.js": "^1.34.6",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/jspdf": "^2.0.0",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "genkit-cli": "^1.13.0",

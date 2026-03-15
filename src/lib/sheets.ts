@@ -1,4 +1,3 @@
-
 import { google } from 'googleapis';
 import type { sheets_v4 } from 'googleapis';
 
@@ -80,13 +79,13 @@ export async function findRowIndex(sheetName: string, key: string, value: string
 
     if (sheetName === STUDENT_SHEET_NAME) {
         header = STUDENT_HEADER;
-        data = allData.slice(1); // data without header
+        data = allData.slice(1);
     } else if (sheetName === TEACHER_SHEET_NAME) {
         header = TEACHER_HEADER;
         data = allData.slice(1);
-    } else { // For other sheets like Prices, the logic might differ
-         header = allData[0] || [];
-         data = allData.slice(1);
+    } else {
+        header = allData[0] || [];
+        data = allData.slice(1);
     }
     
     if (!header) return -1;
@@ -102,11 +101,24 @@ export async function findRowIndex(sheetName: string, key: string, value: string
 
 export async function addRow(sheetName: string, rowData: any[]) {
     const { spreadsheetId, auth } = await getSpreadsheet();
+
+    // Use a full column range (e.g. "Students!A:Z") instead of just the sheet
+    // name. When only the sheet name is passed as the range, the Sheets API
+    // resolves it to A1 and can overwrite the first data row rather than
+    // appending after the last occupied row.
+    const range = `${sheetName}!A:Z`;
+
     await sheets.spreadsheets.values.append({
         spreadsheetId,
         auth,
-        range: sheetName,
+        range,
         valueInputOption: 'USER_ENTERED',
+        // OVERWRITE would replace cells starting from the first empty row it
+        // finds in the matched range; INSERT_ROWS shifts existing rows down.
+        // Both work correctly with the full-column range above, but
+        // INSERT_ROWS is safer — it physically inserts a new row so there is
+        // no risk of clobbering adjacent data.
+        insertDataOption: 'INSERT_ROWS',
         requestBody: {
             values: [rowData],
         },
