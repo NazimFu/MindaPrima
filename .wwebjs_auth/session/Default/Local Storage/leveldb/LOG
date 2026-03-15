@@ -1,3 +1,2 @@
-2026/03/15-00:23:30.864 3580 Reusing MANIFEST C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/03/15-00:23:30.874 3580 Recovering log #3
-2026/03/15-00:23:30.883 3580 Reusing old log C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\Local Storage\leveldb/000003.log 
+2026/03/15-19:08:08.079 64f4 Creating DB C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\Local Storage\leveldb since it was missing.
+2026/03/15-19:08:08.206 64f4 Reusing MANIFEST C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001

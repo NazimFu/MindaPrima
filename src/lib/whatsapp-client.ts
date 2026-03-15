@@ -80,15 +80,38 @@ export async function initWhatsAppClient(): Promise<void> {
 
   client = new Client({
     authStrategy: new LA({ dataPath: authPath }) as LocalAuth,
+
+    // ── Pin a stable WhatsApp Web version ─────────────────────────────────
+    // Without this, whatsapp-web.js loads whatever version WhatsApp serves,
+    // which may trigger multi-page navigations that destroy Puppeteer's
+    // execution context mid-call ("Protocol error: Execution context was
+    // destroyed").  Pinning a known-good version via the local cache keeps
+    // the page stable for the lifetime of the session.
+    webVersionCache: {
+      type: 'local',
+    },
+
     puppeteer: {
-      // Use the system-installed Chromium when running in Docker / Linux CI.
-      // On macOS / Windows the bundled Chromium from puppeteer is used automatically.
+      // waitForInitialPage: false prevents the context-destroyed error on
+      // Windows during the initial about:blank → web.whatsapp.com navigation.
+      waitForInitialPage: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        // Prevent WhatsApp Web from triggering background page reloads
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
       ],
     },
+
+    // Give WhatsApp Web more time to load on slower machines
+    authTimeoutMs: 60000,
+    // Automatically restart the client if auth fails (e.g. after a reload)
+    restartOnAuthFail: true,
   });
 
   // ── Events ────────────────────────────────────────────────────────────────
@@ -206,5 +229,28 @@ export async function sendPdfToNumber(
   const b64   = pdfBuffer.toString('base64');
   const media = new MessageMedia('application/pdf', b64, filename);
 
-  await client.sendMessage(chatId, media, { caption });
+  // Retry once on "Execution context was destroyed" — this can happen when
+  // WhatsApp Web reloads its service worker in the background on Windows.
+  // A single retry is enough because the context is stable again by then.
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await client.sendMessage(chatId, media, { caption });
+      return; // success
+    } catch (err: any) {
+      lastError = err;
+      const isContextError =
+        typeof err?.message === 'string' &&
+        (err.message.includes('Execution context was destroyed') ||
+         err.message.includes('Protocol error'));
+
+      if (isContextError && attempt === 1) {
+        // Wait 2 s for the page to stabilise, then retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
 }

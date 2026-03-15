@@ -1,3 +1,2 @@
-2026/03/15-00:23:30.994 3184 Reusing MANIFEST C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\shared_proto_db/MANIFEST-000001
-2026/03/15-00:23:30.996 3184 Recovering log #3
-2026/03/15-00:23:30.997 3184 Reusing old log C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\shared_proto_db/000003.log 
+2026/03/15-19:08:07.486 6700 Creating DB C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\shared_proto_db since it was missing.
+2026/03/15-19:08:07.507 6700 Reusing MANIFEST C:\Users\asus\OneDrive\Desktop\Documents\MINDA_PRIMA\MindaPrima\.wwebjs_auth\session\Default\shared_proto_db/MANIFEST-000001
