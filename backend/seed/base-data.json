@@ -1,0 +1,22 @@
+{
+  "_note": "Initial content for an empty spreadsheet. Everything here is edited in the app afterwards. Amounts and times are placeholders.",
+  "settings": { "centre.name": "Minda Prima", "receipt.prefix": "RCP" },
+  "levels": ["Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6", "Secondary 1", "Secondary 2", "Secondary 3", "Secondary 4", "Secondary 5"],
+  "subjects": ["Mathematics", "Science", "Bahasa Melayu", "English"],
+  "sessions": [
+    { "name": "Morning", "code": "M", "color": "#B45F06", "start": "07:00", "end": "12:00" },
+    { "name": "Afternoon", "code": "A", "color": "#1F6B3F", "start": "12:00", "end": "17:00" },
+    { "name": "Night", "code": "N", "color": "#2F4A8A", "start": "17:00", "end": "22:00" }
+  ],
+  "tuition": {
+    "Primary 1": [80, 140, 190, 230], "Primary 2": [80, 140, 190, 230], "Primary 3": [80, 140, 190, 230],
+    "Primary 4": [90, 160, 220, 270], "Primary 5": [90, 160, 220, 270], "Primary 6": [100, 180, 250, 310],
+    "Secondary 1": [100, 180, 260, 330], "Secondary 2": [100, 180, 260, 330], "Secondary 3": [110, 190, 270, 340],
+    "Secondary 4": [120, 210, 290, 360], "Secondary 5": [120, 210, 290, 360]
+  },
+  "transport": { "inside": 40, "outside": 60 },
+  "waTemplates": [
+    { "name": "invoice", "body": "Salam {guardian},\n\nSila semak invois Minda Prima bagi bulan {month}.\nJumlah bayaran: {total}\nNo. Invois: {number}\n\nTerima kasih." },
+    { "name": "reminder", "body": "Salam {guardian}, peringatan mesra: baki bayaran invois {number} ialah {balance}. Terima kasih." }
+  ]
+}

@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #F5F6F0; --sf: #FFFFFF; --sb: #14382A; --th: #EAF1EB; --ln: #E2E2DA; --tx: #1C1F1D; --mu: #666B66;
+  --ac: #1F6B3F; --acfg: #FFFFFF; --hv: #EAEAE4;
+  --ok: #1F6B3F; --okb: #E6F0E9; --wn: #80530A; --wnb: #F8EED9; --er: #B3261E; --erb: #F9E4E2;
+}
+.dark {
+  --th: #1B231D; --bg: #121412; --sf: #171A17; --sb: #0E100E; --ln: #2A2E2A; --tx: #ECEDE8; --mu: #9CA29B;
+  --ac: #7FCB97; --acfg: #0E1A12; --hv: #202420;
+  --ok: #7FCB97; --okb: #173022; --wn: #E5B358; --wnb: #33280F; --er: #F2938B; --erb: #3A1B19;
+}
+
+@layer base {
+  html { background: var(--bg); }
+  body {
+    @apply bg-bg text-tx font-sans text-[13px] leading-[1.45];
+    font-variant-numeric: tabular-nums;
+  }
+  h1 { @apply text-[22px] font-semibold; }
+  h2 { @apply text-[17px] font-semibold; }
+  h3 { @apply text-[14px] font-semibold; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+}
+
+@layer components {
+  .btn { @apply inline-flex h-8 items-center justify-center gap-1 rounded border border-ln bg-sf px-3 text-[13px] font-medium text-tx hover:bg-hv disabled:opacity-50; }
+  .btn-pr { @apply border-ac bg-ac text-acfg hover:opacity-90; }
+  .btn-danger { @apply border-er bg-er text-white hover:opacity-90; }
+  .inp { @apply h-[34px] w-full rounded border border-ln bg-sf px-2.5 text-[13px] text-tx placeholder:text-mu; }
+  textarea.inp { @apply h-auto py-2; }
+  .lbl { @apply flex flex-col gap-1 text-[12px] font-medium text-mu; }
+  .th { @apply border-b border-ln bg-th px-3 py-2 text-left text-[12px] font-medium text-mu; }
+  .td { @apply border-b border-ln px-3 py-[11px] align-middle; }
+  .lk { @apply border-b border-dotted border-mu text-inherit no-underline hover:text-ac; }
+  .card { @apply overflow-hidden rounded border border-ln bg-sf; }
+  .card-h { @apply flex items-center justify-between border-b border-ln px-3.5 py-2.5 font-semibold; }
+  .st { @apply inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-[12px] font-medium; }
+  .st::before { content: ''; @apply h-1.5 w-1.5 rounded-full bg-current; }
+  .st-ok { @apply bg-okb text-ok; }
+  .st-wn { @apply bg-wnb text-wn; }
+  .st-er { @apply bg-erb text-er; }
+  .st-mu { @apply bg-hv text-mu; }
+  .kv { @apply grid grid-cols-[150px_minmax(0,1fr)] gap-x-3 gap-y-2 px-3.5 py-3; }
+  .kv > :nth-child(odd) { @apply text-mu; }
+}
