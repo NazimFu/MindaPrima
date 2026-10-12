@@ -1,6 +1,6 @@
 import {
   AREA_LABEL, fullName, monthCode, round2,
-  type BillingRow, type GuardianListItem, type GuardianProfileDto, type InvoiceDto, type InvoiceLine, type OverviewDto,
+  type BillingDto, type BillingRow, type GuardianListItem, type GuardianProfileDto, type InvoiceDto, type InvoiceLine, type OverviewDto,
   type PaymentDto, type PaymentStatus, type ReceiptDto, type SessionUser,
 } from '@minda/common';
 import type { AppContext } from '../lib/context';
@@ -8,7 +8,7 @@ import { badRequest, conflict, notFound } from '../lib/errors';
 import { newId } from '../sheets/repo';
 import { audit } from './audit';
 import {
-  activeStudents, feeOf, invoiceFor, invoicePaid, invoiceSummary, invoiceTotal, levelName, snap, subjectsOf, transportOf, type Snap,
+  activeStudents, feeOf, invoiceFor, invoicePaid, invoiceSummary, invoiceTotal, levelName, snap, studentStatus, subjectsOf, transportOf, type Snap,
 } from './snapshot';
 
 const paymentDto = (p: { id: string; receiptNumber: string; amount: number; method: PaymentDto['method']; date: string }): PaymentDto =>
@@ -76,7 +76,7 @@ export async function getInvoice(ctx: AppContext, id: string): Promise<InvoiceDt
   return dto(await snap(ctx), id);
 }
 
-export async function billingRows(ctx: AppContext, month?: string): Promise<{ month: string; rows: BillingRow[] }> {
+export async function billingRows(ctx: AppContext, month?: string): Promise<BillingDto> {
   const s = await snap(ctx);
   const m = month ?? s.currentMonth;
   const rows = s.guardians.flatMap((g): BillingRow[] => {
@@ -84,7 +84,7 @@ export async function billingRows(ctx: AppContext, month?: string): Promise<{ mo
     if (kids.length === 0) return [];
     const inv = invoiceFor(s, g.id, m);
     return [{
-      guardian: { id: g.id, name: g.name, contact: g.contact }, children: kids.map((k) => ({ id: k.id, name: k.firstName })),
+      guardian: { id: g.id, name: g.name, contact: g.contact }, children: kids.map((k) => ({ id: k.id, name: k.firstName, levelName: levelName(s, k.levelId), subjects: subjectsOf(s, k), fee: feeOf(s, k).total, status: studentStatus(s, k, m) })),
       invoice: inv ? invoiceSummary(s, inv) : null, expected: round2(kids.reduce((a, k) => a + feeOf(s, k).total, 0)),
     }];
   });
@@ -151,7 +151,7 @@ export async function guardianProfile(ctx: AppContext, id: string): Promise<Guar
     children: kids.map((k) => ({ id: k.id, firstName: k.firstName, levelName: levelName(s, k.levelId), fee: feeOf(s, k).total })),
     familyTotal: round2(kids.reduce((a, k) => a + feeOf(s, k).total, 0)),
     owed: round2(invoices.reduce((a, i) => a + invoiceTotal(s, i) - invoicePaid(s, i), 0)),
-    invoices: invoices.map((i) => ({ ...invoiceSummary(s, i), receipts: s.payments.filter((p) => p.invoiceId === i.id).map((p) => p.receiptNumber) })),
+    invoices: invoices.map((i) => ({ ...invoiceSummary(s, i), receipts: s.payments.filter((p) => p.invoiceId === i.id).map((p) => ({ id: p.id, number: p.receiptNumber })) })),
   };
 }
 
@@ -164,11 +164,23 @@ export async function overview(ctx: AppContext, month?: string): Promise<Overvie
   const collected = round2(monthInvoices.reduce((a, i) => a + invoicePaid(s, i), 0));
   const statusCounts: Record<PaymentStatus, number> = { Paid: 0, Partial: 0, Pending: 0, Overdue: 0 };
   for (const g of list) statusCounts[g.status]++;
+  const byStatus: OverviewDto['byStatus'] = { Paid: { students: 0, amount: 0 }, Partial: { students: 0, amount: 0 }, Pending: { students: 0, amount: 0 }, Overdue: { students: 0, amount: 0 } };
+  for (const st of activeStudents(s)) {
+    const row = byStatus[studentStatus(s, st, m)];
+    row.students++;
+    row.amount = round2(row.amount + feeOf(s, st).total);
+  }
+  const levels = [...s.levels].sort((a, b) => a.order - b.order).map((l) => ({ name: l.name, count: activeStudents(s).filter((x) => x.levelId === l.id).length }));
+  const [y, mo] = m.split('-').map(Number) as [number, number];
+  const prevKey = `${mo === 1 ? y - 1 : y}-${String(mo === 1 ? 12 : mo - 1).padStart(2, '0')}`;
+  const prevInvoices = s.invoices.filter((i) => i.month === prevKey);
+  const prevBilled = prevInvoices.reduce((a, i) => a + invoiceTotal(s, i), 0);
+  const previous = prevBilled > 0 ? { month: prevKey, collectedPercent: Math.round((prevInvoices.reduce((a, i) => a + invoicePaid(s, i), 0) / prevBilled) * 100) } : null;
   return {
     month: m,
     counts: { students: activeStudents(s).length, guardians: list.length, teachers: s.teachers.length, vehicles: s.vehicles.length },
     money: { expected, collected, owed: round2(list.reduce((a, g) => a + g.owed, 0)) },
-    statusCounts,
+    statusCounts, byStatus, levels, previous,
     guardians: [...list].sort((a, b) => worstOrder(b.status) - worstOrder(a.status)),
   };
 }

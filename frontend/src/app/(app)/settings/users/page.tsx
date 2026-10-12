@@ -26,8 +26,8 @@ export default function UsersPage() {
           <Table head={['Name', 'Email', 'Role', 'Vehicle', 'Active', '']}>
             {users.data.map((u) => (
               <tr key={u.id}>
-                <td className="td">{u.name}</td><td className="td font-mono">{u.email}</td><td className="td">{u.role}</td>
-                <td className="td font-mono">{ref.vehicles.find((v) => v.id === u.vehicleId)?.plate ?? ''}</td>
+                <td className="td">{u.name}</td><td className="td">{u.email}</td><td className="td">{u.role}</td>
+                <td className="td">{ref.vehicles.find((v) => v.id === u.vehicleId)?.plate ?? ''}</td>
                 <td className="td">{u.active ? 'Yes' : 'No'}</td>
                 <td className="td text-right">{u.id !== user.id && <button type="button" className="btn" onClick={() => toggle(u)}>{u.active ? 'Disable' : 'Enable'}</button>}</td>
               </tr>
@@ -39,7 +39,7 @@ export default function UsersPage() {
         {!audit.data?.length ? <Empty>No entries</Empty> : (
           <Table head={['When', 'Action', 'Entity', 'Detail']} min={560}>
             {audit.data.slice(0, 50).map((a) => (
-              <tr key={a.id}><td className="td font-mono">{a.at.replace('T', ' ').slice(0, 19)}</td><td className="td">{a.action}</td><td className="td font-mono">{a.entity}</td><td className="td">{a.detail}</td></tr>
+              <tr key={a.id}><td className="td">{a.at.replace('T', ' ').slice(0, 19)}</td><td className="td">{a.action}</td><td className="td">{a.entity}</td><td className="td">{a.detail}</td></tr>
             ))}
           </Table>
         )}

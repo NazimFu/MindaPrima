@@ -1,106 +1,166 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { AREA_LABEL, type PaymentStatus, type StudentListItem, type StudentProfileDto, type StudentTransportRow } from '@minda/common';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { AREA_LABEL, toSheet, type PaymentStatus, type StudentListItem, type StudentProfileDto, type StudentTransportRow } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
 import { api, del } from '@/lib/api';
 import { clientMonth } from '@/lib/today';
 import { useSession } from '@/components/session';
 import { StudentForm } from '@/components/student-form';
-import { Card, Dialog, Empty, ErrorNote, Loading, MonthPicker, PageHeader, PersonLink, SessionChip, Status, Table, Tabs } from '@/components/ui';
+import { Dialog, Empty, ErrorNote, Loading, MonthPicker, SessionChip, Status, Tabs } from '@/components/ui';
 
 type Tab = 'all' | PaymentStatus | 'transport';
 
 export default function StudentsPage() {
+  return <Suspense fallback={<Loading />}><Students /></Suspense>;
+}
+
+function Students() {
   const router = useRouter();
-  const { user } = useSession();
+  const params = useSearchParams();
+  const { user, ref } = useSession();
   const canEdit = user.role === 'admin' || user.role === 'staff';
   const [month, setMonth] = useState(clientMonth());
-  const [tab, setTab] = useState<Tab>('all');
+  const initial = params.get('status');
+  const [tab, setTab] = useState<Tab>(params.get('tab') === 'transport' && canEdit ? 'transport' : initial === 'Paid' || initial === 'Pending' || initial === 'Overdue' || initial === 'Partial' ? initial : 'all');
   const [q, setQ] = useState('');
-  const [form, setForm] = useState<{ student?: StudentProfileDto } | null>(null);
+  const [levelId, setLevelId] = useState('');
+  const [form, setForm] = useState<{ student?: StudentProfileDto } | null>(params.get('new') && canEdit ? {} : null);
   const [confirm, setConfirm] = useState<StudentListItem | null>(null);
+  const [menu, setMenu] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const list = useApi<StudentListItem[]>(`/students?month=${month}`);
-  const rides = useApi<StudentTransportRow[]>(tab === 'transport' && canEdit ? '/students/transport' : null);
+  const rides = useApi<StudentTransportRow[]>(canEdit ? '/students/transport' : null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const rows = (list.data ?? []).filter((s) => (tab === 'all' || tab === 'transport' ? true : s.status === tab) && s.firstName.toLowerCase().includes(q.toLowerCase()));
-  const count = (st: PaymentStatus) => (list.data ?? []).filter((s) => s.status === st).length;
+  useEffect(() => {
+    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(null); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  const all = list.data ?? [];
+  const match = (name: string) => name.toLowerCase().includes(q.toLowerCase());
+  const rows = all.filter((s) => (tab === 'all' || s.status === tab) && (!levelId || s.levelId === levelId)
+    && (match(s.firstName) || s.guardian.name.toLowerCase().includes(q.toLowerCase()) || s.subjects.some((x) => match(x))));
+  const count = (st: PaymentStatus) => all.filter((s) => s.status === st).length;
+  const rideRows = (rides.data ?? []).filter((r) => match(r.firstName));
 
   async function edit(id: string) {
+    setMenu(null);
     try { setForm({ student: await api<StudentProfileDto>(`/students/${id}`) }); } catch (e) { setErr((e as Error).message); }
   }
   async function remove(s: StudentListItem) {
     try { await del(`/students/${s.id}`); setConfirm(null); list.reload(); } catch (e) { setErr((e as Error).message); setConfirm(null); }
   }
+  function exportCsv() {
+    const head = ['Name', 'Level', 'Subjects', 'Guardian', 'Status'];
+    const lines = [head, ...rows.map((s) => [s.firstName, s.levelName, s.subjects.join(' / '), s.guardian.name, s.status])]
+      .map((r) => r.map((c) => `"${toSheet(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines], { type: 'text/csv' }));
+    a.download = `students-${month}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Students" count={list.data?.length}
-        actions={<>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1>Students</h1>
+        <div className="flex flex-wrap items-center gap-2">
           <MonthPicker value={month} onChange={setMonth} current={clientMonth()} />
+          <button type="button" className="btn" onClick={exportCsv}>Export CSV</button>
           {canEdit && <button type="button" className="btn btn-pr" onClick={() => setForm({})}>Add student</button>}
-        </>} />
+        </div>
+      </div>
       <ErrorNote message={err || list.error} />
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[
-        { id: 'all', label: 'All', count: list.data?.length },
+        { id: 'all', label: 'All', count: all.length },
         { id: 'Paid', label: 'Paid', count: count('Paid') },
+        { id: 'Partial', label: 'Partial', count: count('Partial') },
         { id: 'Pending', label: 'Pending', count: count('Pending') },
         { id: 'Overdue', label: 'Overdue', count: count('Overdue') },
-        ...(canEdit ? [{ id: 'transport' as const, label: 'Transport' }] : []),
+        ...(canEdit ? [{ id: 'transport' as const, label: 'Transport', count: rides.data?.length }] : []),
       ]} />
-      <div><input className="inp max-w-xs" placeholder="Search by first name" aria-label="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+
+      <div className="flex flex-wrap gap-2">
+        <input className="inp min-w-[260px] flex-1" placeholder={tab === 'transport' ? 'Search name' : 'Search name, subject or guardian'} aria-label="Search students" value={q} onChange={(e) => setQ(e.target.value)} />
+        {tab !== 'transport' && (
+          <select className="inp !w-auto" aria-label="Level" value={levelId} onChange={(e) => setLevelId(e.target.value)}>
+            <option value="">All levels</option>
+            {ref.levels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        )}
+      </div>
 
       {tab === 'transport' ? (
-        <Card>
-          {rides.loading ? <Loading /> : (rides.data ?? []).length === 0 ? <Empty>No students ride</Empty> : (
-            <Table head={['Student', 'Level', 'Vehicle', 'Zone', 'Plan', 'Days']}>
-              {(rides.data ?? []).filter((r) => r.firstName.toLowerCase().includes(q.toLowerCase())).map((r) => (
-                <tr key={r.studentId}>
-                  <td className="td"><PersonLink kind="student" id={r.studentId}>{r.firstName}</PersonLink></td>
-                  <td className="td">{r.levelName}</td>
-                  <td className="td font-mono">{r.vehicle?.plate ?? ''}</td>
-                  <td className="td">{AREA_LABEL[r.area]}</td>
-                  <td className="td">{r.plan}</td>
-                  <td className="td">
-                    <div className="flex flex-wrap gap-x-3 gap-y-1">
-                      {Object.entries(r.schedule.reduce<Record<string, string[]>>((m, s) => { (m[s.day] ??= []).push(s.sessionId); return m; }, {})).map(([day, ids]) => (
-                        <span key={day} className="inline-flex items-center gap-1"><span className="text-mu">{day}</span>{ids.map((id) => <SessionChip key={id} id={id} />)}</span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </Table>
+        <div className="overflow-x-auto rounded-md border border-ln bg-sf">
+          {rides.loading ? <Loading /> : rideRows.length === 0 ? <Empty>No students ride</Empty> : (
+            <table className="w-full min-w-[640px] border-collapse">
+              <thead><tr><th className="th">Name</th><th className="th">Level</th><th className="th">Vehicle</th><th className="th">Address is</th><th className="th">Plan</th><th className="th">Days and sessions</th></tr></thead>
+              <tbody>
+                {rideRows.map((r) => (
+                  <tr key={r.studentId}>
+                    <td className="td font-medium"><Link className="lk" href={`/students/${r.studentId}`}>{r.firstName}</Link></td>
+                    <td className="td">{r.levelName}</td>
+                    <td className="td"><span className="mono">{r.vehicle?.plate ?? ''}</span></td>
+                    <td className="td">{AREA_LABEL[r.area]}</td>
+                    <td className="td">{r.plan}</td>
+                    <td className="td">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        {Object.entries(r.schedule.reduce<Record<string, string[]>>((m, s) => { (m[s.day] ??= []).push(s.sessionId); return m; }, {})).map(([day, ids]) => (
+                          <span key={day} className="inline-flex items-center gap-1"><span className="text-mu">{day}</span>{ids.map((id) => <SessionChip key={id} id={id} />)}</span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-        </Card>
+        </div>
       ) : (
-        <Card>
-          {list.loading && !list.data ? <Loading /> : rows.length === 0 ? <Empty>No students</Empty> : (
-            <Table head={['Student', 'Level', 'Subjects', 'Guardian', 'Status', '']}>
-              {rows.map((s) => (
-                <tr key={s.id}>
-                  <td className="td"><PersonLink kind="student" id={s.id}>{s.firstName}</PersonLink></td>
-                  <td className="td">{s.levelName}</td>
-                  <td className="td">{s.subjects.join(', ')}</td>
-                  <td className="td">{canEdit ? <PersonLink kind="guardian" id={s.guardian.id}>{s.guardian.name}</PersonLink> : s.guardian.name}</td>
-                  <td className="td"><Status value={s.status} /></td>
-                  <td className="td whitespace-nowrap text-right">
-                    <button type="button" className="btn" onClick={() => router.push(`/students/${s.id}`)}>View</button>
-                    {canEdit && <> <button type="button" className="btn" onClick={() => edit(s.id)}>Edit</button> <button type="button" className="btn" onClick={() => setConfirm(s)}>Delete</button></>}
-                  </td>
-                </tr>
-              ))}
-            </Table>
-          )}
-        </Card>
+        <>
+          <div className="overflow-x-auto rounded-md border border-ln bg-sf" ref={menuRef}>
+            {list.loading && !list.data ? <Loading /> : rows.length === 0 ? <Empty>No students</Empty> : (
+              <table className="w-full min-w-[640px] border-collapse">
+                <thead><tr><th className="th">Name</th><th className="th">Level</th><th className="th">Subjects</th><th className="th">Guardian</th><th className="th">Status</th><th className="th w-12" /></tr></thead>
+                <tbody>
+                  {rows.map((s) => (
+                    <tr key={s.id}>
+                      <td className="td font-medium"><Link className="lk" href={`/students/${s.id}`}>{s.firstName}</Link></td>
+                      <td className="td">{s.levelName}</td>
+                      <td className="td text-mu">{s.subjects.join(', ')}</td>
+                      <td className="td text-mu">{canEdit ? <Link className="lk" href={`/guardians/${s.guardian.id}`}>{s.guardian.name}</Link> : s.guardian.name}</td>
+                      <td className="td"><Status value={s.status} /></td>
+                      <td className="td relative">
+                        <button type="button" aria-label="Row actions" aria-haspopup="menu" aria-expanded={menu === s.id} onClick={() => setMenu(menu === s.id ? null : s.id)}
+                          className="h-7 w-9 rounded-[4px] text-base text-mu hover:bg-hv">…</button>
+                        {menu === s.id && (
+                          <div role="menu" className="absolute right-4 top-9 z-20 w-[188px] rounded-md border border-ln bg-sf p-1 shadow-[0_6px_20px_rgba(0,0,0,.12)]">
+                            <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => router.push(`/students/${s.id}`)}>View profile</button>
+                            {canEdit && <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => edit(s.id)}>Edit</button>}
+                            {canEdit && <><div className="my-1 h-px bg-ln" /><button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left text-er hover:bg-hv" onClick={() => { setMenu(null); setConfirm(s); }}>Delete…</button></>}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="text-mu">Showing {rows.length} of {all.length}</div>
+        </>
       )}
 
-      {form && <StudentForm student={form.student} onClose={() => setForm(null)} onSaved={() => { setForm(null); list.reload(); }} />}
+      {form && <StudentForm student={form.student} onClose={() => setForm(null)} onSaved={() => { setForm(null); list.reload(); rides.reload(); }} />}
       {confirm && (
-        <Dialog title="Delete student" onClose={() => setConfirm(null)}
-          footer={<><button type="button" className="btn" onClick={() => setConfirm(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => remove(confirm)}>Delete</button></>}>
-          <p className="px-6 py-5">Delete {confirm.firstName}? Past invoices are kept.</p>
+        <Dialog title={`Delete ${confirm.firstName}?`} onClose={() => setConfirm(null)}
+          footer={<><button type="button" className="btn" onClick={() => setConfirm(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => remove(confirm)}>Delete student</button></>}>
+          <p className="px-6 py-5">This removes the student record from the registry and from future invoices. Past invoices are not changed.</p>
         </Dialog>
       )}
     </div>

@@ -1,6 +1,6 @@
 {
   "_note": "Initial content for an empty spreadsheet. Everything here is edited in the app afterwards. Amounts and times are placeholders.",
-  "settings": { "centre.name": "Minda Prima", "receipt.prefix": "RCP" },
+  "settings": { "centre.name": "Minda Prima", "centre.address": "", "centre.phone": "", "centre.tagline": "", "receipt.prefix": "RCP" },
   "levels": ["Primary 1", "Primary 2", "Primary 3", "Primary 4", "Primary 5", "Primary 6", "Secondary 1", "Secondary 2", "Secondary 3", "Secondary 4", "Secondary 5"],
   "subjects": ["Mathematics", "Science", "Bahasa Melayu", "English"],
   "sessions": [

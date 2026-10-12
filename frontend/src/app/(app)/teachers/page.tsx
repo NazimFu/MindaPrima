@@ -1,40 +1,49 @@
 'use client';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import type { Teacher } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
 import { del, post, put } from '@/lib/api';
 import { useSession } from '@/components/session';
-import { Card, Dialog, Empty, ErrorNote, Field, Loading, PageHeader, PersonLink, Table } from '@/components/ui';
+import { Dialog, Empty, ErrorNote, Field, Loading } from '@/components/ui';
 
 export default function TeachersPage() {
-  const { user, ref } = useSession();
+  return <Suspense fallback={<Loading />}><Teachers /></Suspense>;
+}
+
+function Teachers() {
+  const { user } = useSession();
+  const params = useSearchParams();
   const canEdit = user.role === 'admin' || user.role === 'staff';
   const { data, error, loading, reload } = useApi<Teacher[]>('/teachers');
-  const [edit, setEdit] = useState<Teacher | 'new' | null>(null);
-  const [err, setErr] = useState('');
-  const levelNames = (csv: string) => csv.split(',').filter(Boolean).map((id) => ref.levels.find((l) => l.id === id)?.name).filter(Boolean).join(', ');
-  async function remove(t: Teacher) {
-    try { await del(`/teachers/${t.id}`); reload(); } catch (e) { setErr((e as Error).message); }
-  }
+  const [edit, setEdit] = useState<Teacher | 'new' | null>(params.get('new') && canEdit ? 'new' : null);
   return (
-    <div className="space-y-4">
-      <PageHeader title="Teachers" count={data?.length} actions={canEdit && <button type="button" className="btn btn-pr" onClick={() => setEdit('new')}>Add teacher</button>} />
-      <ErrorNote message={err || error} />
-      <Card>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1>Teachers {data && <span className="font-normal text-mu">{data.length}</span>}</h1>
+        {canEdit && <button type="button" className="btn btn-pr" onClick={() => setEdit('new')}>Add teacher</button>}
+      </div>
+      <ErrorNote message={error} />
+      <div className="card">
         {loading && !data ? <Loading /> : !data?.length ? <Empty>No teachers</Empty> : (
-          <Table head={['Teacher', 'Subject', 'Levels', 'Contact', '']}>
-            {data.map((t) => (
-              <tr key={t.id}>
-                <td className="td"><PersonLink kind="teacher" id={t.id}>{t.name}</PersonLink></td>
-                <td className="td">{t.subject}</td>
-                <td className="td">{levelNames(t.levelIds)}</td>
-                <td className="td font-mono">{t.contact}</td>
-                <td className="td whitespace-nowrap text-right">{canEdit && <><button type="button" className="btn" onClick={() => setEdit(t)}>Edit</button> <button type="button" className="btn" onClick={() => remove(t)}>Delete</button></>}</td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] border-collapse">
+              <thead><tr><th className="th">Name</th><th className="th">Subject</th><th className="th">Contact</th><th className="th w-[120px]" /></tr></thead>
+              <tbody>
+                {data.map((t) => (
+                  <tr key={t.id}>
+                    <td className="td font-medium"><Link className="lk" href={`/teachers/${t.id}`}>{t.name}</Link></td>
+                    <td className="td">{t.subject}</td>
+                    <td className="td text-mu">{t.contact}</td>
+                    <td className="td text-right">{canEdit && <button type="button" className="font-medium text-ac" onClick={() => setEdit(t)}>Edit</button>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </Card>
+      </div>
       {edit && <TeacherDialog teacher={edit === 'new' ? undefined : edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}
     </div>
   );
@@ -54,9 +63,16 @@ function TeacherDialog({ teacher, onClose, onSaved }: { teacher?: Teacher; onClo
       onSaved();
     } catch (e) { setError((e as Error).message); }
   }
+  async function remove() {
+    if (!teacher) return;
+    try { await del(`/teachers/${teacher.id}`); onSaved(); } catch (e) { setError((e as Error).message); }
+  }
   return (
     <Dialog title={teacher ? 'Edit teacher' : 'Add teacher'} onClose={onClose}
-      footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn btn-pr" onClick={save}>Save</button></>}>
+      footer={<>
+        {teacher && <button type="button" className="btn mr-auto text-er" onClick={remove}>Delete</button>}
+        <button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn btn-pr" onClick={save}>Save</button>
+      </>}>
       <div className="space-y-3 p-6">
         <ErrorNote message={error} />
         <Field label="Name"><input className="inp" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></Field>

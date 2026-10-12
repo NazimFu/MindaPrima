@@ -69,7 +69,7 @@ export function CrudCard<T extends { id: string }>(p: Props<T>) {
                 <Field key={f.key} label={f.label}>
                   {f.type === 'textarea' ? <textarea className="inp" rows={5} maxLength={f.max ?? 1000} value={value} onChange={(e) => set(e.target.value)} />
                     : f.type === 'select' ? <select className="inp" value={value} onChange={(e) => set(e.target.value)}>{f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    : <input className={`inp ${f.type === 'number' ? 'font-mono' : ''}`} type={f.type === 'color' ? 'color' : f.type === 'time' ? 'time' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} maxLength={f.max} value={value} onChange={(e) => set(e.target.value)} />}
+                    : <input className={`inp ${f.type === 'number' ? '' : ''}`} type={f.type === 'color' ? 'color' : f.type === 'time' ? 'time' : 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} maxLength={f.max} value={value} onChange={(e) => set(e.target.value)} />}
                 </Field>
               );
             })}

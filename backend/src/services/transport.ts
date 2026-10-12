@@ -62,7 +62,7 @@ export async function vehicleBoard(ctx: AppContext, vehicleId: string, date?: st
     const t = transportOf(s, studentId);
     const g = s.guardians.find((x) => x.id === st.guardianId);
     return {
-      entryId, studentId, firstName: st.firstName, levelName: levelName(s, st.levelId), guardian: { id: st.guardianId, name: g?.name ?? '' },
+      entryId, studentId, firstName: st.firstName, levelName: levelName(s, st.levelId), guardian: { id: st.guardianId, name: g?.name ?? '' }, guardianPhone: g?.contact ?? '',
       sessionId, pickup: t?.pickupFrom === 'Home' ? st.address : 'School', dropoff: t?.dropoffAddress || st.address,
       plan: t?.plan ?? 'Both ways', status,
     };

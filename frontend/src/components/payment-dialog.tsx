@@ -17,9 +17,9 @@ export function PaymentDialog({ invoiceId, number, balance, onClose, onSaved }: 
     <Dialog title="Record payment" onClose={onClose}
       footer={<><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn btn-pr" onClick={save}>Save</button></>}>
       <div className="space-y-3 p-6">
-        <div className="text-mu">Invoice <span className="font-mono">{number}</span>, balance <span className="font-mono">{formatRM(balance)}</span></div>
+        <div className="text-mu">Invoice <span className="">{number}</span>, balance <span className="">{formatRM(balance)}</span></div>
         <ErrorNote message={error} />
-        <Field label="Amount (RM)"><input className="inp font-mono" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+        <Field label="Amount (RM)"><input className="inp" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
         <Field label="Method"><select className="inp" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>{PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}</select></Field>
         <Field label="Date"><input type="date" className="inp" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
       </div>

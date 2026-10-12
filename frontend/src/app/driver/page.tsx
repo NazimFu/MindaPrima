@@ -30,6 +30,7 @@ export default function DriverPage() {
 
   const b = board.data;
   const riders = (b?.riders ?? []).filter((r) => !sid || r.sessionId === sid);
+  const next = riders.find((r) => r.status === 'Waiting');
   return (
     <main className="mx-auto max-w-md space-y-3 p-4">
       <div className="flex items-center justify-between">
@@ -41,13 +42,21 @@ export default function DriverPage() {
         <>
           <div className="grid grid-cols-3 gap-2 text-center">
             {([['Picked', b.stats.picked], ['Waiting', b.stats.waiting], ['Absent', b.stats.absent]] as const).map(([k, v]) => (
-              <div key={k} className="card py-2"><div className="font-mono text-[20px] font-semibold">{v}</div><div className="text-mu">{k}</div></div>
+              <div key={k} className="card py-2"><div className=" text-[20px] font-semibold">{v}</div><div className="text-mu">{k}</div></div>
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={`btn ${sid === '' ? 'btn-pr' : ''}`} onClick={() => setSid('')}>All</button>
             {sessions.map((s) => <button key={s.id} type="button" className={`btn ${sid === s.id ? 'btn-pr' : ''}`} onClick={() => setSid(s.id)}>{s.name} {formatRange(s.start, s.end)}</button>)}
           </div>
+          {next && (
+            <div className="card border-ac p-3">
+              <div className="text-mu">Next stop</div>
+              <div className="mt-0.5 flex items-center justify-between"><strong className="text-[17px]">{next.firstName}</strong><span className="text-mu">{next.levelName}</span></div>
+              <div>Pick-up: {next.pickup}</div>
+              {next.guardianPhone && <a className="mt-2 inline-block text-ac no-underline" href={`tel:${next.guardianPhone}`}>Call {next.guardian.name} {next.guardianPhone}</a>}
+            </div>
+          )}
           <ul className="space-y-2">
             {riders.map((r) => (
               <li key={`${r.studentId}-${r.sessionId}`} className="card p-3">

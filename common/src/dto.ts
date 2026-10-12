@@ -49,7 +49,7 @@ export interface GuardianProfileDto {
   id: string; name: string; contact: string; address: string;
   children: { id: string; firstName: string; levelName: string; fee: number }[];
   familyTotal: number; owed: number;
-  invoices: (InvoiceSummary & { receipts: string[] })[];
+  invoices: (InvoiceSummary & { receipts: { id: string; number: string }[] })[];
 }
 
 export interface TeacherProfileDto {
@@ -62,7 +62,7 @@ export interface TeacherProfileDto {
 
 export interface TransportRider {
   entryId: string; studentId: string; firstName: string; levelName: string; guardian: PersonLink;
-  sessionId: string; pickup: string; dropoff: string; plan: TransportPlan; status: RiderStatus;
+  sessionId: string; guardianPhone: string; pickup: string; dropoff: string; plan: TransportPlan; status: RiderStatus;
 }
 
 export interface VehicleBoardDto {
@@ -90,13 +90,21 @@ export interface ReceiptDto {
   balance: number;
 }
 
-export interface BillingRow { guardian: PersonLink & { contact: string }; children: PersonLink[]; invoice: InvoiceSummary | null; expected: number }
+export interface BillingChild { id: string; name: string; levelName: string; subjects: string[]; fee: number; status: PaymentStatus }
+export interface BillingRow { guardian: PersonLink & { contact: string }; children: BillingChild[]; invoice: InvoiceSummary | null; expected: number }
+export interface BillingDto { month: string; rows: BillingRow[] }
 
 export interface OverviewDto {
   month: string;
   counts: { students: number; guardians: number; teachers: number; vehicles: number };
   money: { expected: number; collected: number; owed: number };
+  /** Guardians per status. */
   statusCounts: Record<PaymentStatus, number>;
+  /** Students and their monthly fees per status. */
+  byStatus: Record<PaymentStatus, { students: number; amount: number }>;
+  levels: { name: string; count: number }[];
+  /** Share of billed money collected in the month before, null when nothing was billed. */
+  previous: { month: string; collectedPercent: number } | null;
   guardians: GuardianListItem[];
 }
 
