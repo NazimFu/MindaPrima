@@ -1,37 +1,43 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 import { formatRM, type GuardianListItem } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
 import { clientMonth } from '@/lib/today';
 import { GuardianDialog } from '@/components/guardian-dialog';
-import { Card, Empty, ErrorNote, Loading, MonthPicker, PageHeader, PersonLink, Status, Table } from '@/components/ui';
+import { Empty, ErrorNote, Loading, Status } from '@/components/ui';
 
 export default function GuardiansPage() {
-  const [month, setMonth] = useState(clientMonth());
-  const { data, error, loading, reload } = useApi<GuardianListItem[]>(`/guardians?month=${month}`);
-  const [edit, setEdit] = useState<GuardianListItem | 'new' | null>(null);
+  const { data, error, loading, reload } = useApi<GuardianListItem[]>(`/guardians?month=${clientMonth()}`);
+  const [add, setAdd] = useState(false);
   return (
-    <div className="space-y-4">
-      <PageHeader title="Guardians" count={data?.length}
-        actions={<><MonthPicker value={month} onChange={setMonth} current={clientMonth()} /><button type="button" className="btn btn-pr" onClick={() => setEdit('new')}>Add guardian</button></>} />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h1>Guardians {data && <span className="font-normal text-mu">{data.length}</span>}</h1>
+        <button type="button" className="btn btn-pr" onClick={() => setAdd(true)}>Add guardian</button>
+      </div>
       <ErrorNote message={error} />
-      <Card>
+      <div className="card">
         {loading && !data ? <Loading /> : !data?.length ? <Empty>No guardians</Empty> : (
-          <Table head={['Guardian', 'Contact', 'Children', { label: 'Owed', right: true }, 'Status', '']}>
-            {data.map((g) => (
-              <tr key={g.id}>
-                <td className="td"><PersonLink kind="guardian" id={g.id}>{g.name}</PersonLink></td>
-                <td className="td font-mono">{g.contact}</td>
-                <td className="td">{g.children.map((c, i) => <span key={c.id}>{i > 0 && ', '}<PersonLink kind="student" id={c.id}>{c.name}</PersonLink></span>)}</td>
-                <td className="td text-right font-mono">{formatRM(g.owed)}</td>
-                <td className="td"><Status value={g.status} /></td>
-                <td className="td text-right"><button type="button" className="btn" onClick={() => setEdit(g)}>Edit</button></td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] border-collapse">
+              <thead><tr><th className="th">Name</th><th className="th">Contact</th><th className="th">Children</th><th className="th text-right">Owed</th><th className="th">Status</th></tr></thead>
+              <tbody>
+                {data.map((g) => (
+                  <tr key={g.id}>
+                    <td className="td"><Link className="lk" href={`/guardians/${g.id}`}>{g.name}</Link></td>
+                    <td className="td">{g.contact}</td>
+                    <td className="td">{g.children.map((c, i) => <span key={c.id}>{i > 0 && ', '}<Link className="lk" href={`/students/${c.id}`}>{c.name}</Link></span>)}</td>
+                    <td className="td text-right">{formatRM(g.owed)}</td>
+                    <td className="td"><Status value={g.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </Card>
-      {edit && <GuardianDialog guardian={edit === 'new' ? undefined : edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}
+      </div>
+      {add && <GuardianDialog onClose={() => setAdd(false)} onSaved={() => { setAdd(false); reload(); }} />}
     </div>
   );
 }

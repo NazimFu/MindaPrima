@@ -20,14 +20,18 @@
     font-variant-numeric: tabular-nums;
   }
   h1 { @apply text-[22px] font-semibold; }
-  h2 { @apply text-[17px] font-semibold; }
+  h2 { @apply text-[15px] font-semibold; }
   h3 { @apply text-[14px] font-semibold; }
   a { color: inherit; }
   :focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
 }
 
 @layer components {
-  .btn { @apply inline-flex h-8 items-center justify-center gap-1 rounded border border-ln bg-sf px-3 text-[13px] font-medium text-tx hover:bg-hv disabled:opacity-50; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; }
+  .sub { @apply text-[12px] text-mu; }
+  .tabs a, .tab { @apply -mb-px border-b-2 border-transparent px-0.5 py-2 text-mu no-underline; margin-right: 22px; }
+  .tab-on { @apply border-ac font-semibold text-tx; }
+  .btn { @apply inline-flex h-8 items-center justify-center gap-1 rounded-md border border-ln bg-sf px-3 text-[13px] font-medium text-tx hover:bg-hv disabled:opacity-50; }
   .btn-pr { @apply border-ac bg-ac text-acfg hover:opacity-90; }
   .btn-danger { @apply border-er bg-er text-white hover:opacity-90; }
   .inp { @apply h-[34px] w-full rounded border border-ln bg-sf px-2.5 text-[13px] text-tx placeholder:text-mu; }
@@ -36,7 +40,7 @@
   .th { @apply border-b border-ln bg-th px-3 py-2 text-left text-[12px] font-medium text-mu; }
   .td { @apply border-b border-ln px-3 py-[11px] align-middle; }
   .lk { @apply border-b border-dotted border-mu text-inherit no-underline hover:text-ac; }
-  .card { @apply overflow-hidden rounded border border-ln bg-sf; }
+  .card { @apply overflow-hidden rounded-md border border-ln bg-sf; }
   .card-h { @apply flex items-center justify-between border-b border-ln px-3.5 py-2.5 font-semibold; }
   .st { @apply inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-[12px] font-medium; }
   .st::before { content: ''; @apply h-1.5 w-1.5 rounded-full bg-current; }

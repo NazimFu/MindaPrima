@@ -29,7 +29,7 @@ export default function ClassesPage() {
                 <td className="td">{c.subject}</td>
                 <td className="td">{c.teacher ? <PersonLink kind="teacher" id={c.teacher.id}>{c.teacher.name}</PersonLink> : ''}</td>
                 <td className="td">{c.slots.map((s) => `${s.day} ${formatClock(s.start)}-${formatClock(s.end)}`).join(', ')}</td>
-                <td className="td text-right font-mono">{c.studentCount}</td>
+                <td className="td text-right">{c.studentCount}</td>
                 <td className="td whitespace-nowrap text-right">{canEdit && <><button type="button" className="btn" onClick={() => setEdit(c)}>Edit</button> <button type="button" className="btn" onClick={() => remove(c)}>Delete</button></>}</td>
               </tr>
             ))}
@@ -39,7 +39,7 @@ export default function ClassesPage() {
       {canEdit && (
         <div className="grid gap-4 lg:grid-cols-2">
           <CrudCard<Level> title="Levels" path="/levels" noun="level" head={['Order', 'Name']} reloadRef={ref.reload}
-            cells={(l) => [<span key="o" className="font-mono">{l.order}</span>, l.name]} sort={(a, b) => a.order - b.order}
+            cells={(l) => [<span key="o" className="">{l.order}</span>, l.name]} sort={(a, b) => a.order - b.order}
             fields={[{ key: 'name', label: 'Name', max: 40 }, { key: 'order', label: 'Order', type: 'number' }]}
             blank={{ name: '', order: String(ref.levels.length + 1) }} toForm={(l) => ({ name: l.name, order: String(l.order) })}
             toBody={(f) => ({ name: f.name, order: Number(f.order) })} />

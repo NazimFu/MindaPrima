@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [refData, setRefData] = useState<{ sessions: Session[]; levels: Level[]; subjects: Subject[]; vehicles: Vehicle[] } | null>(null);
   const [tick, setTick] = useState(0);
   const [dark, setDark] = useState(false);
+  const [tagline, setTagline] = useState('');
 
   useEffect(() => { setDark(document.documentElement.classList.contains('dark')); }, []);
 
@@ -45,6 +46,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user || user.role === 'driver') return;
+    if (user.role === 'admin' || user.role === 'staff') {
+      api<{ key: string; value: string }[]>('/settings').then((rows) => setTagline(rows.find((r) => r.key === 'centre.tagline')?.value ?? '')).catch(() => undefined);
+    }
     Promise.all([
       api<Session[]>('/sessions'), api<Level[]>('/levels'), api<Subject[]>('/subjects'), api<Vehicle[]>('/vehicles'),
     ]).then(([sessions, levels, subjects, vehicles]) => setRefData({
@@ -81,7 +85,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="px-2.5 pb-1.5 pt-5 text-xs text-[#A3BCAA]">Settings</div>
           {allowed(SETTINGS).map(link)}
           <div className="mt-auto flex flex-col gap-1 px-2.5 pt-6 text-xs text-[#A3BCAA]">
-            <span>{user.name} ({user.role})</span>
+            {tagline && <span>{tagline}</span>}
+            <span className="pt-2">{user.name}</span>
             <div className="flex gap-3">
               <button type="button" className="underline" onClick={toggleTheme}>{dark ? 'Light' : 'Dark'}</button>
               <button type="button" className="underline" onClick={logout}>Sign out</button>

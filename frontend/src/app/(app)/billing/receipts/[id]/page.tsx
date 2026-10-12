@@ -1,13 +1,19 @@
 'use client';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { formatRM, monthLabel, type ReceiptDto } from '@minda/common';
+import { formatRM, type ReceiptDto } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
+import { useCentre } from '@/hooks/use-centre';
 import { elementToPdf } from '@/lib/pdf';
-import { ErrorNote, Loading, PageHeader } from '@/components/ui';
+import { DocSheet, DocTh, docTd } from '@/components/letterhead';
+import { ErrorNote, Loading } from '@/components/ui';
+
+const longDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export default function ReceiptPage() {
   const { id } = useParams<{ id: string }>();
+  const centre = useCentre();
   const { data: r, error, loading } = useApi<ReceiptDto>(`/billing/receipts/${id}`);
   const sheet = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState('');
@@ -18,28 +24,50 @@ export default function ReceiptPage() {
     if (!sheet.current || !r) return;
     try { (await elementToPdf(sheet.current)).save(`${r.payment.receiptNumber}.pdf`); } catch (e) { setErr((e as Error).message); }
   }
+  const state = r.balance <= 0 ? 'Paid' : 'Part paid';
   return (
-    <div className="space-y-4">
-      <PageHeader title={r.payment.receiptNumber} back={{ href: `/billing/invoices/${r.invoice.id}`, label: r.invoice.number }}
-        actions={<button type="button" className="btn" onClick={download}>Download PDF</button>} />
-      <ErrorNote message={err} />
-      <div ref={sheet} className="mx-auto max-w-[620px] bg-white p-8 text-[#1C1F1D]">
-        <div className="flex justify-between border-b border-[#E2E2DA] pb-4">
-          <div><div className="text-[20px] font-semibold">Minda Prima</div><div className="text-[#666B66]">Receipt</div></div>
-          <div className="text-right"><div className="font-mono text-[16px] font-semibold">{r.payment.receiptNumber}</div><div className="text-[#666B66]">{r.payment.date}</div></div>
-        </div>
-        <div className="space-y-2 py-4">
-          <div className="flex justify-between"><span className="text-[#666B66]">Received from</span><span>{r.invoice.guardian.name}</span></div>
-          <div className="flex justify-between"><span className="text-[#666B66]">For</span><span><span className="font-mono">{r.invoice.number}</span>, {monthLabel(r.invoice.month)}</span></div>
-          <div className="flex justify-between"><span className="text-[#666B66]">Students</span><span className="text-right">{[...new Set(r.invoice.lines.map((l) => l.studentName))].join(', ')}</span></div>
-          <div className="flex justify-between"><span className="text-[#666B66]">Method</span><span>{r.payment.method}</span></div>
-        </div>
-        <div className="space-y-1 border-t border-[#E2E2DA] pt-3">
-          <div className="flex justify-between"><span>Amount received</span><span className="font-mono text-[16px] font-semibold">{formatRM(r.payment.amount)}</span></div>
-          <div className="flex justify-between"><span>Invoice total</span><span className="font-mono">{formatRM(r.invoice.total)}</span></div>
-          <div className="flex justify-between"><span>Balance</span><span className="font-mono">{formatRM(r.balance)}</span></div>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[820px] flex-wrap items-center justify-between gap-3">
+        <Link href={`/billing/invoices/${r.invoice.id}`} className="font-medium text-ac no-underline">← Invoice {r.invoice.number}</Link>
+        <button type="button" className="btn btn-pr" onClick={download}>Download PDF</button>
       </div>
+      <ErrorNote message={err} />
+      <DocSheet sheetRef={sheet} centre={centre} title="Receipt" meta={
+        <>
+          <div className="mt-2"><span className="text-[#666B66]">No.</span> <span className="mono">{r.payment.receiptNumber}</span></div>
+          <div><span className="text-[#666B66]">Date</span> {longDate(r.payment.date)}</div>
+          <div><span className="text-[#666B66]">For invoice</span> <span className="mono">{r.invoice.number}</span></div>
+        </>
+      }>
+        <div className="flex flex-wrap justify-between gap-4">
+          <div>
+            <div className="text-[12px] text-[#666B66]">Received from</div>
+            <div className="text-[15px] font-semibold">{r.invoice.guardian.name}</div>
+            <div className="text-[#666B66]">{[r.invoice.guardian.address, r.invoice.guardian.contact].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[12px] text-[#666B66]">Invoice status</div>
+            <span className={`st ${r.balance <= 0 ? 'st-ok' : 'st-wn'}`}>{state}</span>
+          </div>
+        </div>
+        <table className="w-full border-collapse">
+          <thead><tr><DocTh>Date</DocTh><DocTh>Method</DocTh><DocTh>Students</DocTh><DocTh right>Amount</DocTh></tr></thead>
+          <tbody>
+            <tr>
+              <td className={docTd}>{r.payment.date}</td>
+              <td className={docTd}>{r.payment.method}</td>
+              <td className={docTd}>{[...new Set(r.invoice.lines.map((l) => l.studentName))].join(', ')}</td>
+              <td className={`${docTd} text-right`}>{formatRM(r.payment.amount)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="flex w-[300px] flex-col gap-1.5 self-end">
+          <div className="flex justify-between"><span className="text-[#666B66]">Invoice total</span><span>{formatRM(r.invoice.total)}</span></div>
+          <div className="flex justify-between"><span className="text-[#666B66]">Received to date</span><span>{formatRM(r.received)}</span></div>
+          <div className="flex justify-between border-t-2 border-[#14382A] pt-2 text-[16px] font-semibold text-[#14382A]"><span>Balance due</span><span>{formatRM(Math.max(0, r.balance))}</span></div>
+        </div>
+        <div className="border-t border-[#E2E2DA] pt-3.5 text-[12px] text-[#666B66]">Thank you. This receipt confirms the payment above. The invoice stays open until the balance is paid.</div>
+      </DocSheet>
     </div>
   );
 }

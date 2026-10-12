@@ -15,7 +15,7 @@ export const Status = ({ value }: { value: PaymentStatus | RiderStatus }) => <sp
 export function SessionChip({ id, on = true }: { id: string; on?: boolean }) {
   const { ref } = useSession();
   const s = ref.sessions.find((x) => x.id === id);
-  if (!s) return <span className="font-mono text-mu">?</span>;
+  if (!s) return <span className=" text-mu">?</span>;
   return (
     <span
       title={s.name}
@@ -86,7 +86,7 @@ export function Dialog({ title, onClose, children, wide, footer }: { title: stri
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={box} role="dialog" aria-modal="true" aria-label={title} className={`w-full rounded-lg bg-sf shadow-2xl ${wide ? 'max-w-[1080px]' : 'max-w-[480px]'}`}>
         <div className="flex items-center justify-between border-b border-ln px-6 py-4">
-          <h2>{title}</h2>
+          <h2 className="text-[17px]">{title}</h2>
           <button type="button" aria-label="Close" className="h-9 w-9 text-xl text-mu" onClick={onClose}>×</button>
         </div>
         <div>{children}</div>
@@ -96,27 +96,29 @@ export function Dialog({ title, onClose, children, wide, footer }: { title: stri
   );
 }
 
+/** ‹ October 2026 › stepper. The next arrow stops at the current month. */
 export function MonthPicker({ value, onChange, current }: { value: string; onChange: (m: string) => void; current: string }) {
-  const options: string[] = [];
-  const [cy, cm] = current.split('-').map(Number) as [number, number];
-  for (let i = -11; i <= 1; i++) {
-    const d = new Date(Date.UTC(cy, cm - 1 + i, 1));
-    options.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
-  }
+  const shift = (n: number) => {
+    const [y, m] = value.split('-').map(Number) as [number, number];
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    onChange(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+  };
   return (
-    <select aria-label="Month" className="inp !w-auto" value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
-    </select>
+    <div className="flex items-center gap-1">
+      <button type="button" className="btn !w-8 !px-0" aria-label="Previous month" onClick={() => shift(-1)}>‹</button>
+      <span className="min-w-[120px] text-center font-medium">{monthLabel(value)}</span>
+      <button type="button" className="btn !w-8 !px-0" aria-label="Next month" disabled={value >= current} onClick={() => shift(1)}>›</button>
+    </div>
   );
 }
 
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (t: T) => void }) {
   return (
-    <div className="flex flex-wrap gap-1 border-b border-ln" role="tablist">
+    <div className="flex flex-wrap border-b border-ln" role="tablist">
       {tabs.map((t) => (
         <button key={t.id} type="button" role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}
-          className={`-mb-px border-b-2 px-3 py-2 font-medium ${value === t.id ? 'border-ac text-ac' : 'border-transparent text-mu hover:text-tx'}`}>
-          {t.label}{t.count !== undefined && <span className="ml-1.5 text-mu">{t.count}</span>}
+          className={`tab ${value === t.id ? 'tab-on' : ''}`}>
+          {t.label}{t.count !== undefined && ` ${t.count}`}
         </button>
       ))}
     </div>
