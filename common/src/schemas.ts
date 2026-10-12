@@ -118,6 +118,12 @@ export const invoiceGenerateSchema = z.object({
   extraAmount: money.default(0),
 }).strict();
 
+export const invoiceExtrasSchema = z.object({
+  extras: z.array(z.object({
+    label: text(80), detail: optionalText(120), kind: z.enum(['Addition', 'Discount']), amount: money.refine((n) => n > 0, 'Amount must be above zero'),
+  }).strict()).max(20),
+}).strict();
+
 export const paymentInputSchema = z.object({
   invoiceId: idSchema,
   amount: money.refine((n) => n > 0, 'Amount must be above zero'),

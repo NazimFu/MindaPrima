@@ -33,6 +33,7 @@ export interface Invoice { id: string; number: string; guardianId: string; month
 export interface InvoiceLine {
   id: string; invoiceId: string; studentId: string; studentName: string; levelName: string; description: string; amount: number;
 }
+export interface InvoiceExtra { id: string; invoiceId: string; label: string; detail: string; kind: 'Addition' | 'Discount'; amount: number }
 export interface Payment { id: string; invoiceId: string; receiptNumber: string; amount: number; method: PaymentMethod; date: string; createdBy: string }
 export interface RefreshToken { id: string; userId: string; tokenHash: string; expiresAt: string; createdAt: string; revoked: boolean }
 export interface Setting { key: string; value: string }

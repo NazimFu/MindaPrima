@@ -14,7 +14,7 @@ export function DocSheet({ centre, title, meta, children, sheetRef }: { centre: 
     <div ref={sheetRef} className="flex flex-col gap-7 border border-[#E2E2DA] border-t-[6px] border-t-[#14382A] bg-white px-14 pb-12 pt-11 text-[#1C1F1D]" style={{ width: A4_W, minHeight: A4_H, boxSizing: 'border-box', fontVariantNumeric: 'normal' }}>
       <div className="flex justify-between gap-5">
         <div className="flex gap-3.5">
-          <Image src={logo} alt="" width={56} height={56} className="shrink-0 object-contain" style={{ width: 56, height: 56 }} />
+          <Image src={logo} alt="" width={40} height={40} className="shrink-0 object-contain" style={{ width: 40, height: 40 }} />
           <div>
             <div className="text-[18px] font-semibold text-[#14382A]">{centre.name}</div>
             <div className="text-[#666B66]">

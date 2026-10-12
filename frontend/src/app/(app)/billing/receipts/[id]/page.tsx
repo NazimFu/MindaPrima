@@ -26,12 +26,13 @@ export default function ReceiptPage() {
   }
   const state = r.balance <= 0 ? 'Paid' : 'Part paid';
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-[calc(100dvh-3.5rem)] min-h-[420px] flex-col gap-3">
       <div className="mx-auto flex w-full max-w-[794px] flex-wrap items-center justify-between gap-3">
         <Link href={`/billing/invoices/${r.invoice.id}`} className="font-medium text-ac no-underline">← Invoice {r.invoice.number}</Link>
         <button type="button" className="btn btn-pr" onClick={download}>Download PDF</button>
       </div>
       <ErrorNote message={err} />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
       <DocSheet sheetRef={sheet} centre={centre} title="Receipt" meta={
         <>
           <div className="mt-2"><span className="text-[#666B66]">No.</span> <span className="mono">{r.payment.receiptNumber}</span></div>
@@ -68,6 +69,7 @@ export default function ReceiptPage() {
         </div>
         <div className="border-t border-[#E2E2DA] pt-3.5 text-[12px] text-[#666B66]">Thank you. This receipt confirms the payment above. The invoice stays open until the balance is paid.</div>
       </DocSheet>
+      </div>
     </div>
   );
 }
