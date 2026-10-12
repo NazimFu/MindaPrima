@@ -28,16 +28,29 @@ function Students() {
   const [levelId, setLevelId] = useState('');
   const [form, setForm] = useState<{ student?: StudentProfileDto } | null>(params.get('new') && canEdit ? {} : null);
   const [confirm, setConfirm] = useState<StudentListItem | null>(null);
-  const [menu, setMenu] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [err, setErr] = useState('');
   const list = useApi<StudentListItem[]>(`/students?month=${month}`);
   const rides = useApi<StudentTransportRow[]>(canEdit ? '/students/transport' : null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(null); };
+    const close = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!menuRef.current?.contains(t) && !t.closest('[data-row-menu]')) setMenu(null);
+    };
+    const off = () => setMenu(null);
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(null); };
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    window.addEventListener('scroll', off, true);
+    window.addEventListener('resize', off);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+      window.removeEventListener('scroll', off, true);
+      window.removeEventListener('resize', off);
+    };
   }, []);
 
   const all = list.data ?? [];
@@ -123,7 +136,7 @@ function Students() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-md border border-ln bg-sf" ref={menuRef}>
+          <div className="overflow-x-auto rounded-md border border-ln bg-sf">
             {list.loading && !list.data ? <Loading /> : rows.length === 0 ? <Empty>No students</Empty> : (
               <table className="w-full min-w-[640px] border-collapse">
                 <thead><tr><th className="th">Name</th><th className="th">Level</th><th className="th">Subjects</th><th className="th">Guardian</th><th className="th">Status</th><th className="th w-12" /></tr></thead>
@@ -135,16 +148,16 @@ function Students() {
                       <td className="td text-mu">{s.subjects.join(', ')}</td>
                       <td className="td text-mu">{canEdit ? <Link className="lk" href={`/guardians/${s.guardian.id}`}>{s.guardian.name}</Link> : s.guardian.name}</td>
                       <td className="td"><Status value={s.status} /></td>
-                      <td className="td relative">
-                        <button type="button" aria-label="Row actions" aria-haspopup="menu" aria-expanded={menu === s.id} onClick={() => setMenu(menu === s.id ? null : s.id)}
+                      <td className="td">
+                        <button type="button" data-row-menu aria-label="Row actions" aria-haspopup="menu" aria-expanded={menu?.id === s.id}
+                          onClick={(e) => {
+                            if (menu?.id === s.id) { setMenu(null); return; }
+                            const r = e.currentTarget.getBoundingClientRect();
+                            const x = Math.max(8, Math.min(r.right - 188, window.innerWidth - 196));
+                            const y = r.bottom + 4 + 130 > window.innerHeight ? Math.max(8, r.top - 4 - 130) : r.bottom + 4;
+                            setMenu({ id: s.id, x, y });
+                          }}
                           className="h-7 w-9 rounded-[4px] text-base text-mu hover:bg-hv">…</button>
-                        {menu === s.id && (
-                          <div role="menu" className="absolute right-4 top-9 z-20 w-[188px] rounded-md border border-ln bg-sf p-1 shadow-[0_6px_20px_rgba(0,0,0,.12)]">
-                            <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => router.push(`/students/${s.id}`)}>View profile</button>
-                            {canEdit && <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => edit(s.id)}>Edit</button>}
-                            {canEdit && <><div className="my-1 h-px bg-ln" /><button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left text-er hover:bg-hv" onClick={() => { setMenu(null); setConfirm(s); }}>Delete…</button></>}
-                          </div>
-                        )}
                       </td>
                     </tr>
                   ))}
@@ -152,6 +165,18 @@ function Students() {
               </table>
             )}
           </div>
+          {menu && (() => {
+            const row = all.find((x) => x.id === menu.id);
+            if (!row) return null;
+            return (
+              <div ref={menuRef} role="menu" style={{ position: 'fixed', left: menu.x, top: menu.y }}
+                className="z-50 w-[188px] rounded-md border border-ln bg-sf p-1 shadow-[0_6px_20px_rgba(0,0,0,.18)]">
+                <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => router.push(`/students/${row.id}`)}>View profile</button>
+                {canEdit && <button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left hover:bg-hv" onClick={() => edit(row.id)}>Edit</button>}
+                {canEdit && <><div className="my-1 h-px bg-ln" /><button role="menuitem" type="button" className="block w-full rounded-[4px] px-2.5 py-[7px] text-left text-er hover:bg-hv" onClick={() => { setMenu(null); setConfirm(row); }}>Delete…</button></>}
+              </div>
+            );
+          })()}
           <div className="text-mu">Showing {rows.length} of {all.length}</div>
         </>
       )}
