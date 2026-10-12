@@ -6,7 +6,7 @@ import { formatRM, monthLabel, round2, type InvoiceDto, type InvoiceExtraDto } f
 import { useApi } from '@/hooks/use-api';
 import { useCentre } from '@/hooks/use-centre';
 import { post, put } from '@/lib/api';
-import { elementToPdf } from '@/lib/pdf';
+import { invoicePdf } from '@/lib/pdf-doc';
 import { DocSheet, DocTh, docTd } from '@/components/letterhead';
 import { PaymentDialog } from '@/components/payment-dialog';
 import { ErrorNote, Loading } from '@/components/ui';
@@ -47,15 +47,15 @@ export default function InvoicePage() {
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   async function download() {
-    if (!sheet.current || !inv) return;
+    if (!inv) return;
     setBusy(true);
-    try { (await elementToPdf(sheet.current)).save(`${inv.number}.pdf`); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    try { (await invoicePdf(inv, centre)).save(`${inv.number}.pdf`); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   async function send() {
-    if (!sheet.current || !inv) return;
+    if (!inv) return;
     setBusy(true); setErr(''); setNote('');
     try {
-      const pdfBase64 = (await elementToPdf(sheet.current)).output('datauristring').split(',')[1] ?? '';
+      const pdfBase64 = (await invoicePdf(inv, centre)).output('datauristring').split(',')[1] ?? '';
       await post('/whatsapp/send-invoice', { invoiceId: inv.id, pdfBase64 });
       setNote('Sent on WhatsApp');
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
@@ -101,7 +101,7 @@ export default function InvoicePage() {
           </tbody>
         </table>
 
-        <div data-html2canvas-ignore="true">
+        <div>
           <div className="mb-1.5 flex items-baseline justify-between">
             <span className="font-semibold">Extra fees and discounts</span>
             <span className="flex items-center gap-3">
@@ -122,17 +122,6 @@ export default function InvoicePage() {
             ))}
           </div>
         </div>
-        {rows.length > 0 && !dirty && (
-          <div data-pdf-only="true" style={{ display: 'none' }}>
-            <div className="mb-1.5 font-semibold">Extra fees and discounts</div>
-            <table className="w-full border-collapse"><tbody>
-              {rows.map((r, i) => (
-                <tr key={i}><td className={`${docTd} font-medium`}>{r.label}</td><td className={`${docTd} text-[#666B66]`}>{r.detail}</td><td className={`${docTd} text-[#666B66]`}>{r.kind}</td><td className={`${docTd} text-right`}>{r.kind === 'Discount' ? '−' : ''}{formatRM(r.n)}</td></tr>
-              ))}
-            </tbody></table>
-          </div>
-        )}
-
         <div className="flex w-[280px] flex-col gap-1.5 self-end">
           <div className="flex justify-between"><span className="text-[#666B66]">Tuition and transport</span><span>{formatRM(lineTotal)}</span></div>
           {additions > 0 && <div className="flex justify-between"><span className="text-[#666B66]">Extra fees</span><span>{formatRM(additions)}</span></div>}
