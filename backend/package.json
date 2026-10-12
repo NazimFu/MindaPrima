@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "setup:sheets": "tsx src/scripts/setup-sheets.ts",
+    "migrate:legacy": "tsx src/scripts/migrate-legacy.ts",
     "dev:demo": "tsx src/scripts/dev-demo.ts"
   },
   "dependencies": {

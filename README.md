@@ -24,6 +24,8 @@ Configuration comes from environment variables and is validated at startup.
 5. `npm run setup:sheets` creates the tabs, the first admin and starter data (levels, subjects, sessions, prices). Edit them in the app.
 6. `npm run dev` starts the API on :4000 and the app on :9002.
 
+Existing data from the old sheet (Students, Teachers, Prices tabs): set `SHEET_TAB_PREFIX=MP_`, run `npm run migrate:legacy -w @minda/backend` to preview, then add `-- --apply` to write the new tabs. The old tabs are never changed.
+
 Try it without Google: `npm run dev:demo -w @minda/backend` runs the API on an in-memory sheet with demo data.
 It signs in as `admin@demo.local` with the password `demo-admin-password`. Nothing is saved, and it refuses to run in production.
 
