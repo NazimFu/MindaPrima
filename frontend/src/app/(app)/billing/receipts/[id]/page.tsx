@@ -27,7 +27,7 @@ export default function ReceiptPage() {
   const state = r.balance <= 0 ? 'Paid' : 'Part paid';
   return (
     <div className="flex flex-col gap-4">
-      <div className="mx-auto flex w-full max-w-[820px] flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex w-full max-w-[794px] flex-wrap items-center justify-between gap-3">
         <Link href={`/billing/invoices/${r.invoice.id}`} className="font-medium text-ac no-underline">← Invoice {r.invoice.number}</Link>
         <button type="button" className="btn btn-pr" onClick={download}>Download PDF</button>
       </div>
