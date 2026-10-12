@@ -67,7 +67,11 @@ function dto(s: Snap, invId: string): InvoiceDto {
     lines: s.invoiceLines.filter((l) => l.invoiceId === inv.id).map((l) => ({
       studentId: l.studentId, studentName: l.studentName, levelName: l.levelName, description: l.description, amount: l.amount,
     })),
-    extraLabel: inv.extraLabel, extraAmount: inv.extraAmount, total: sum.total, paid: sum.paid, balance: round2(sum.total - sum.paid),
+    extras: [
+      ...(inv.extraAmount !== 0 ? [{ label: inv.extraLabel || 'Extra', detail: '', kind: (inv.extraAmount < 0 ? 'Discount' : 'Addition') as 'Addition' | 'Discount', amount: Math.abs(inv.extraAmount) }] : []),
+      ...s.invoiceExtras.filter((e) => e.invoiceId === inv.id).map((e) => ({ label: e.label, detail: e.detail, kind: e.kind, amount: e.amount })),
+    ],
+    total: sum.total, paid: sum.paid, balance: round2(sum.total - sum.paid),
     status: sum.status, payments: s.payments.filter((p) => p.invoiceId === inv.id).map(paymentDto),
   };
 }
@@ -77,6 +81,23 @@ export async function getInvoice(ctx: AppContext, id: string): Promise<InvoiceDt
 }
 
 /** Invoices for the current month are created when Billing is opened. Existing ones are kept; past months are never filled in. */
+/** Replace the extra fees and discounts on an invoice. */
+export async function setInvoiceExtras(
+  ctx: AppContext, user: SessionUser, invoiceId: string, extras: { label: string; detail: string; kind: 'Addition' | 'Discount'; amount: number }[],
+): Promise<InvoiceDto> {
+  const s = await snap(ctx);
+  const inv = s.invoices.find((i) => i.id === invoiceId);
+  if (!inv) throw notFound('Invoice');
+  const lines = s.invoiceLines.filter((l) => l.invoiceId === inv.id).reduce((a, l) => a + l.amount, 0);
+  const total = round2(lines + extras.reduce((a, e) => a + (e.kind === 'Discount' ? -e.amount : e.amount), 0));
+  if (total < invoicePaid(s, inv)) throw conflict('The total cannot be less than what is already paid');
+  await ctx.db.invoiceExtras.removeWhere((e) => e.invoiceId === inv.id);
+  await ctx.db.invoiceExtras.insertMany(extras.map((e) => ({ id: newId(), invoiceId: inv.id, ...e })));
+  if (inv.extraAmount !== 0 || inv.extraLabel) await ctx.db.invoices.update(inv.id, { extraAmount: 0, extraLabel: '' });
+  await audit(ctx, user, 'invoice.extras', 'invoice', inv.id, `${extras.length} rows`);
+  return dto(await snap(ctx), inv.id);
+}
+
 export async function billingRows(ctx: AppContext, user: SessionUser, month?: string): Promise<BillingDto> {
   let s = await snap(ctx);
   const m = month ?? s.currentMonth;

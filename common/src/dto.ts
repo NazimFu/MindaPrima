@@ -76,10 +76,11 @@ export interface VehicleBoardDto {
 export interface InvoiceLineDto { studentId: string; studentName: string; levelName: string; description: string; amount: number }
 export interface PaymentDto { id: string; receiptNumber: string; amount: number; method: PaymentMethod; date: string }
 
+export interface InvoiceExtraDto { label: string; detail: string; kind: 'Addition' | 'Discount'; amount: number }
 export interface InvoiceDto {
   id: string; number: string; month: string; createdAt: string;
   guardian: { id: string; name: string; contact: string; address: string };
-  lines: InvoiceLineDto[]; extraLabel: string; extraAmount: number;
+  lines: InvoiceLineDto[]; extras: InvoiceExtraDto[];
   total: number; paid: number; balance: number; status: PaymentStatus; payments: PaymentDto[];
 }
 

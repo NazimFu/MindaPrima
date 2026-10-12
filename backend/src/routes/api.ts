@@ -1,6 +1,6 @@
 import { Router, json, type CookieOptions, type Response } from 'express';
 import {
-  CSRF_COOKIE, SESSION_COOKIE, classInputSchema, dateQuerySchema, guardianInputSchema, invoiceGenerateSchema, levelInputSchema,
+  CSRF_COOKIE, SESSION_COOKIE, classInputSchema, dateQuerySchema, guardianInputSchema, invoiceExtrasSchema, invoiceGenerateSchema, levelInputSchema,
   loginSchema, monthQuerySchema, paymentInputSchema, pricingInputSchema, runStatusInputSchema, sessionInputSchema, skipInputSchema,
   studentInputSchema, subjectInputSchema, teacherInputSchema, userInputSchema, vehicleInputSchema, waTemplateInputSchema,
   idSchema, isIsoDate, type SessionUserDto,
@@ -238,6 +238,9 @@ export function apiRouter(ctx: AppContext): Router {
     res.status(201).json(await billing.generateInvoices(ctx, req.user!, parse(invoiceGenerateSchema, req.body)));
   }));
   b.get('/invoices/:id', requireRole(...OFFICE), wrap(async (req, res) => { res.json(await billing.getInvoice(ctx, param(req, 'id'))); }));
+  b.put('/invoices/:id/extras', requireRole(...OFFICE), wrap(async (req, res) => {
+    res.json(await billing.setInvoiceExtras(ctx, req.user!, param(req, 'id'), parse(invoiceExtrasSchema, req.body).extras));
+  }));
   b.post('/payments', requireRole(...OFFICE), wrap(async (req, res) => {
     res.status(201).json(await billing.recordPayment(ctx, req.user!, parse(paymentInputSchema, req.body)));
   }));

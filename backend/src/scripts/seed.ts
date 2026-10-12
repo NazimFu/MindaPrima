@@ -136,7 +136,7 @@ export async function seedDemo(ctx: AppContext): Promise<void> {
   s = await snap(ctx);
   for (const inv of s.invoices) {
     const g = s.guardians.find((x) => x.id === inv.guardianId)!;
-    const total = s.invoiceLines.filter((l) => l.invoiceId === inv.id).reduce((a, l) => a + l.amount, 0) + inv.extraAmount;
+    const total = s.invoiceLines.filter((l) => l.invoiceId === inv.id).reduce((a, l) => a + l.amount, 0) + inv.extraAmount + s.invoiceExtras.filter((e) => e.invoiceId === inv.id).reduce((a, e) => a + (e.kind === 'Discount' ? -e.amount : e.amount), 0);
     if (inv.month === prev && g.name !== 'Lim Wei Jian') await billing.recordPayment(ctx, DEMO_USER, { invoiceId: inv.id, amount: total, method: 'DuitNow', date: `${prev}-05` });
     if (inv.month === s.currentMonth && g.name === 'Aisyah Rahman') await billing.recordPayment(ctx, DEMO_USER, { invoiceId: inv.id, amount: 300, method: 'Cash', date: s.today });
     if (inv.month === s.currentMonth && g.name === 'Tan Mei Ling') await billing.recordPayment(ctx, DEMO_USER, { invoiceId: inv.id, amount: total, method: 'Bank transfer', date: s.today });

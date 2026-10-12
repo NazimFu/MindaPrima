@@ -1,6 +1,6 @@
 import {
   fullName, invoiceStatus, monthlyFee, round2, todayIso, monthOf,
-  type ClassDto, type ClassGroup, type ClassSlot, type Guardian, type Invoice, type InvoiceLine, type InvoiceSummary,
+  type ClassDto, type ClassGroup, type ClassSlot, type Guardian, type Invoice, type InvoiceExtra, type InvoiceLine, type InvoiceSummary,
   type Level, type Payment, type PaymentStatus, type Pricing, type Session, type Skip, type Student, type StudentTransport,
   type Subject, type Teacher, type TransportSlot, type Vehicle, type SlotDto, type FeeBreakdown,
 } from '@minda/common';
@@ -11,22 +11,22 @@ export interface Snap {
   levels: Level[]; subjects: Subject[]; sessions: Session[]; teachers: Teacher[]; guardians: Guardian[];
   classes: ClassGroup[]; classSlots: ClassSlot[]; vehicles: Vehicle[]; students: Student[];
   transport: StudentTransport[]; transportSlots: TransportSlot[]; skips: Skip[]; pricing: Pricing[];
-  invoices: Invoice[]; invoiceLines: InvoiceLine[]; payments: Payment[];
+  invoices: Invoice[]; invoiceLines: InvoiceLine[]; invoiceExtras: InvoiceExtra[]; payments: Payment[];
   today: string; currentMonth: string;
 }
 
 export async function snap(ctx: AppContext): Promise<Snap> {
   const d = ctx.db;
-  const [levels, subjects, sessions, teachers, guardians, classes, classSlots, vehicles, students, transport, transportSlots, skips, pricing, invoices, invoiceLines, payments] =
+  const [levels, subjects, sessions, teachers, guardians, classes, classSlots, vehicles, students, transport, transportSlots, skips, pricing, invoices, invoiceLines, invoiceExtras, payments] =
     await Promise.all([
       d.levels.all(), d.subjects.all(), d.sessions.all(), d.teachers.all(), d.guardians.all(), d.classes.all(), d.classSlots.all(),
       d.vehicles.all(), d.students.all(), d.studentTransport.all(), d.transportSlots.all(), d.skips.all(), d.pricing.all(),
-      d.invoices.all(), d.invoiceLines.all(), d.payments.all(),
+      d.invoices.all(), d.invoiceLines.all(), d.invoiceExtras.all(), d.payments.all(),
     ]);
   const today = todayIso(ctx.config.TZ_NAME);
   return {
     levels: [...levels].sort((a, b) => a.order - b.order), subjects, sessions, teachers, guardians, classes, classSlots, vehicles,
-    students, transport, transportSlots, skips, pricing, invoices, invoiceLines, payments, today, currentMonth: monthOf(today),
+    students, transport, transportSlots, skips, pricing, invoices, invoiceLines, invoiceExtras, payments, today, currentMonth: monthOf(today),
   };
 }
 
@@ -69,7 +69,9 @@ export function feeOf(s: Snap, student: Student): FeeBreakdown {
 }
 
 export function invoiceTotal(s: Snap, inv: Invoice): number {
-  return round2(s.invoiceLines.filter((l) => l.invoiceId === inv.id).reduce((a, l) => a + l.amount, 0) + inv.extraAmount);
+  const lines = s.invoiceLines.filter((l) => l.invoiceId === inv.id).reduce((a, l) => a + l.amount, 0);
+  const extras = s.invoiceExtras.filter((e) => e.invoiceId === inv.id).reduce((a, e) => a + (e.kind === 'Discount' ? -e.amount : e.amount), 0);
+  return round2(lines + extras + inv.extraAmount);
 }
 export const invoicePaid = (s: Snap, inv: Invoice): number =>
   round2(s.payments.filter((p) => p.invoiceId === inv.id).reduce((a, p) => a + p.amount, 0));

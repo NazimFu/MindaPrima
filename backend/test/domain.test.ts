@@ -145,6 +145,24 @@ describe('billing', () => {
     expect(receipt.balance).toBe(0);
   });
 
+  it('keeps extra fees and discounts as rows that change the total', async () => {
+    const { a } = await setup();
+    const month = (await a.get('/billing')).body.month as string;
+    const rows = (await a.get(`/billing?month=${month}`)).body.rows;
+    const aisyah = rows.find((r: { guardian: { name: string } }) => r.guardian.name === 'Aisyah Rahman');
+    const id = aisyah.invoice.id as string;
+    const ok = await a.put(`/billing/invoices/${id}/extras`, { extras: [
+      { label: 'Worksheet', detail: 'Once a year', kind: 'Addition', amount: 30 },
+      { label: 'Sibling discount', detail: 'Third child', kind: 'Discount', amount: 20 },
+    ] });
+    expect(ok.status).toBe(200);
+    expect(ok.body.total).toBe(610);
+    expect(ok.body.extras).toHaveLength(2);
+    expect((await a.put(`/billing/invoices/${id}/extras`, { extras: [{ label: 'x', detail: '', kind: 'Discount', amount: 400 }] })).status).toBe(409);
+    expect((await a.put(`/billing/invoices/${id}/extras`, { extras: [{ label: 'x', detail: '', kind: 'Other', amount: 5 }] })).status).toBe(400);
+    expect((await a.put(`/billing/invoices/${id}/extras`, { extras: [] })).body.total).toBe(600);
+  });
+
   it('rejects bad payments', async () => {
     const { a } = await setup();
     expect((await a.post('/billing/payments', { invoiceId: 'nope', amount: -5, method: 'Cash', date: '2026-01-01' })).status).toBe(400);

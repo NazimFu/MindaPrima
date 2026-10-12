@@ -52,6 +52,7 @@ export const TABLES = {
     columns: ['id', 'invoiceId', 'studentId', 'studentName', 'levelName', 'description', 'amount'],
     numbers: ['amount'],
   }),
+  invoiceExtras: def<T.InvoiceExtra>()({ tab: 'InvoiceExtras', columns: ['id', 'invoiceId', 'label', 'detail', 'kind', 'amount'], numbers: ['amount'] }),
   payments: def<T.Payment>()({ tab: 'Payments', columns: ['id', 'invoiceId', 'receiptNumber', 'amount', 'method', 'date', 'createdBy'], numbers: ['amount'] }),
   refreshTokens: def<T.RefreshToken>()({
     tab: 'RefreshTokens',
@@ -72,7 +73,7 @@ export interface RowMap {
   guardians: T.Guardian; classes: T.ClassGroup; classSlots: T.ClassSlot; vehicles: T.Vehicle;
   students: T.Student; studentTransport: T.StudentTransport; transportSlots: T.TransportSlot;
   skips: T.Skip; runEntries: T.RunEntry; pricing: T.Pricing; invoices: T.Invoice;
-  invoiceLines: T.InvoiceLine; payments: T.Payment; refreshTokens: T.RefreshToken; settings: T.Setting; waTemplates: T.WaTemplate;
+  invoiceLines: T.InvoiceLine; invoiceExtras: T.InvoiceExtra; payments: T.Payment; refreshTokens: T.RefreshToken; settings: T.Setting; waTemplates: T.WaTemplate;
   messageLog: T.MessageLog; auditLog: T.AuditEntry;
 }
 
@@ -80,6 +81,6 @@ export interface RowMap {
 export const KEY_COLUMN: Record<TableKey, string> = {
   users: 'id', levels: 'id', subjects: 'id', sessions: 'id', teachers: 'id', guardians: 'id', classes: 'id',
   classSlots: 'id', vehicles: 'id', students: 'id', studentTransport: 'studentId', transportSlots: 'id',
-  skips: 'id', runEntries: 'id', pricing: 'id', invoices: 'id', invoiceLines: 'id', payments: 'id', refreshTokens: 'id',
+  skips: 'id', runEntries: 'id', pricing: 'id', invoices: 'id', invoiceLines: 'id', invoiceExtras: 'id', payments: 'id', refreshTokens: 'id',
   settings: 'key', waTemplates: 'id', messageLog: 'id', auditLog: 'id',
 };

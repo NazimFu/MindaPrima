@@ -2,7 +2,8 @@
 export async function elementToPdf(el: HTMLElement) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
   if (document.fonts?.ready) await document.fonts.ready;
-  const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: el.scrollWidth, scrollX: 0, scrollY: -window.scrollY });
+  const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: el.scrollWidth, scrollX: 0, scrollY: -window.scrollY,
+    onclone: (doc) => { doc.querySelectorAll<HTMLElement>('[data-pdf-only]').forEach((n) => { n.style.display = 'block'; }); } });
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
   const pw = pdf.internal.pageSize.getWidth();
   const ph = pdf.internal.pageSize.getHeight();
