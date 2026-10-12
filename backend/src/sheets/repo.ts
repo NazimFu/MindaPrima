@@ -37,8 +37,42 @@ class Mutex {
   }
 }
 
+/**
+ * Refreshes stale repositories with a single batchGet instead of one read per tab. Repos that ask in the same tick share
+ * one call, and every other repo that has been loaded before and is now stale rides along, so a whole snapshot costs one read.
+ */
+class BatchLoader {
+  private readonly repos = new Set<Repo<TableKey>>();
+  private batch: { repos: Set<Repo<TableKey>>; done: Promise<void> } | null = null;
+
+  constructor(private client: SheetsClient) {}
+
+  register(repo: Repo<TableKey>) { this.repos.add(repo); }
+
+  refresh(repo: Repo<TableKey>): Promise<void> {
+    if (!this.batch) {
+      const batch = { repos: new Set<Repo<TableKey>>(), done: undefined as unknown as Promise<void> };
+      batch.done = Promise.resolve().then(() => this.run(batch));
+      this.batch = batch;
+    }
+    this.batch.repos.add(repo);
+    return this.batch.done;
+  }
+
+  private async run(batch: { repos: Set<Repo<TableKey>> }): Promise<void> {
+    this.batch = null;
+    for (const r of this.repos) if (r.isWarmAndStale()) batch.repos.add(r);
+    const targets = [...batch.repos];
+    const marks = targets.map((r) => r.mark());
+    const values = await this.client.readMany(targets.map((r) => r.tab));
+    targets.forEach((r, i) => r.fill(values[i]!, marks[i]!));
+  }
+}
+
 export class Repo<K extends TableKey> {
   private cache: { at: number; rows: RowMap[K][] } | null = null;
+  private loadedOnce = false;
+  private gen = 0;
   private readonly def: TableDef;
   private readonly keyCol: string;
 
@@ -48,20 +82,42 @@ export class Repo<K extends TableKey> {
     readonly tab: string,
     private ttlMs: number,
     private mutex: Mutex,
+    private loader: BatchLoader,
   ) {
     this.def = TABLES[key] as unknown as TableDef;
     this.keyCol = KEY_COLUMN[key];
+    this.loader.register(this as unknown as Repo<TableKey>);
   }
 
-  private async load(fresh = false): Promise<RowMap[K][]> {
-    if (!fresh && this.cache && Date.now() - this.cache.at < this.ttlMs) return this.cache.rows;
-    const values = await this.client.read(this.tab);
+  private isFresh() { return !!this.cache && Date.now() - this.cache.at < this.ttlMs; }
+
+  /** True when this repo has been used before and its cache has expired or been invalidated. */
+  isWarmAndStale() { return this.loadedOnce && !this.isFresh(); }
+
+  /** Generation at the time a read starts. A write that lands while the read is in flight bumps it, and the result is discarded. */
+  mark() { return this.gen; }
+
+  /** Decodes a tab and caches it, unless a write invalidated the repo since `mark`. Returns the decoded rows either way. */
+  fill(values: string[][], mark: number): RowMap[K][] {
     const rows = values.slice(1).filter((r) => r.some((c) => c !== '')).map((r) => decode(this.def, r) as unknown as RowMap[K]);
-    this.cache = { at: Date.now(), rows };
+    if (mark === this.gen) {
+      this.cache = { at: Date.now(), rows };
+      this.loadedOnce = true;
+    }
     return rows;
   }
 
-  private invalidate() { this.cache = null; }
+  private async load(): Promise<RowMap[K][]> {
+    if (this.isFresh()) return this.cache!.rows;
+    this.loadedOnce = true;
+    await this.loader.refresh(this as unknown as Repo<TableKey>);
+    if (this.isFresh()) return this.cache!.rows;
+    // The batch result raced with a write and was discarded; read this tab directly.
+    const mark = this.mark();
+    return this.fill(await this.client.read(this.tab), mark);
+  }
+
+  private invalidate() { this.cache = null; this.gen++; }
 
   /** All rows. Callers must not mutate the result. */
   async all(): Promise<RowMap[K][]> { return this.load(); }
@@ -139,9 +195,10 @@ export interface DbOptions { client: SheetsClient; tabPrefix: string; cacheTtlMs
 
 export function createDb({ client, tabPrefix, cacheTtlMs }: DbOptions): Db {
   const mutex = new Mutex();
+  const loader = new BatchLoader(client);
   const db = { client } as Record<string, unknown>;
   for (const key of Object.keys(TABLES) as TableKey[]) {
-    db[key] = new Repo(client, key, `${tabPrefix}${TABLES[key].tab}`, cacheTtlMs, mutex);
+    db[key] = new Repo(client, key, `${tabPrefix}${TABLES[key].tab}`, cacheTtlMs, mutex, loader);
   }
   return db as Db;
 }

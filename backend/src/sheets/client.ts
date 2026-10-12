@@ -4,6 +4,8 @@ export interface SheetsClient {
   createTab(tab: string, header: string[]): Promise<void>;
   /** Whole tab including the header row. */
   read(tab: string): Promise<string[][]>;
+  /** Several tabs in one API call. Result is in the same order as `tabs`. */
+  readMany(tabs: string[]): Promise<string[][][]>;
   append(tab: string, rows: string[][]): Promise<void>;
   /** rowNumber is 1-based sheet row (header is row 1). */
   update(tab: string, rowNumber: number, row: string[]): Promise<void>;

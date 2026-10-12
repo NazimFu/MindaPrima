@@ -11,6 +11,7 @@ export class MemorySheets implements SheetsClient {
     if (!t) throw new Error(`Tab not found: ${tab}`);
     return t.map((r) => [...r]);
   }
+  async readMany(tabs: string[]) { return Promise.all(tabs.map((t) => this.read(t))); }
   async append(tab: string, rows: string[][]) {
     const t = this.tabs.get(tab);
     if (!t) throw new Error(`Tab not found: ${tab}`);
