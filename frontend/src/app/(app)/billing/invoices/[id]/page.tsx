@@ -43,7 +43,7 @@ export default function InvoicePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="mx-auto flex w-full max-w-[820px] flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex w-full max-w-[794px] flex-wrap items-center justify-between gap-3">
         <Link href="/billing" className="font-medium text-ac no-underline">← Billing</Link>
         <div className="flex flex-wrap gap-2">
           {inv.status !== 'Paid' && <button type="button" className="btn" onClick={() => setPay(true)}>Record payment</button>}
@@ -52,7 +52,7 @@ export default function InvoicePage() {
         </div>
       </div>
       <ErrorNote message={err} />
-      {note && <div className="mx-auto w-full max-w-[820px] rounded border border-ln bg-okb px-3 py-2 text-ok">{note}</div>}
+      {note && <div className="mx-auto w-full max-w-[794px] rounded border border-ln bg-okb px-3 py-2 text-ok">{note}</div>}
 
       <DocSheet sheetRef={sheet} centre={centre} title="Invoice" meta={
         <>
@@ -92,7 +92,7 @@ export default function InvoicePage() {
       </DocSheet>
 
       {inv.payments.length > 0 && (
-        <div className="mx-auto w-full max-w-[820px]">
+        <div className="mx-auto w-full max-w-[794px]">
           <h2 className="mb-2">Receipts</h2>
           <ul className="card divide-y divide-ln">
             {inv.payments.map((p) => (

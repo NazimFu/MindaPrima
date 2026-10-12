@@ -233,7 +233,7 @@ export function apiRouter(ctx: AppContext): Router {
 
   // ── Billing ──────────────────────────────────────────────────────────
   const b = Router();
-  b.get('/', requireRole(...OFFICE), wrap(async (req, res) => { res.json(await billing.billingRows(ctx, parse(monthQuerySchema, req.query).month)); }));
+  b.get('/', requireRole(...OFFICE), wrap(async (req, res) => { res.json(await billing.billingRows(ctx, req.user!, parse(monthQuerySchema, req.query).month)); }));
   b.post('/generate', requireRole(...OFFICE), wrap(async (req, res) => {
     res.status(201).json(await billing.generateInvoices(ctx, req.user!, parse(invoiceGenerateSchema, req.body)));
   }));

@@ -3,21 +3,19 @@ import Link from 'next/link';
 import { Fragment, useState } from 'react';
 import { formatRM, type BillingDto, type InvoiceDto } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
-import { api, post } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { clientMonth } from '@/lib/today';
 import { PaymentDialog } from '@/components/payment-dialog';
-import { Dialog, Empty, ErrorNote, Field, Loading, MonthPicker, Status } from '@/components/ui';
-import { monthLabel } from '@minda/common';
+import { Empty, ErrorNote, Loading, MonthPicker, Status } from '@/components/ui';
 
 export default function BillingPage() {
   const router = useRouter();
   const [month, setMonth] = useState(clientMonth());
-  const { data, error, loading, reload } = useApi<BillingDto>(`/billing?month=${month}`);
+  const { data, error, loading } = useApi<BillingDto>(`/billing?month=${month}`);
   const [q, setQ] = useState('');
   const [unpaid, setUnpaid] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const [gen, setGen] = useState(false);
   const [pay, setPay] = useState<InvoiceDto | null>(null);
   const [err, setErr] = useState('');
 
@@ -39,7 +37,6 @@ export default function BillingPage() {
         <h1>Billing</h1>
         <div className="flex flex-wrap items-center gap-3">
           <MonthPicker value={month} onChange={setMonth} current={clientMonth()} />
-          <button type="button" className="btn btn-pr" onClick={() => setGen(true)}>Generate invoices</button>
         </div>
       </div>
       <ErrorNote message={err || error} />
@@ -102,36 +99,7 @@ export default function BillingPage() {
           </table>
         )}
       </div>
-      {gen && <GenerateDialog month={month} onClose={() => setGen(false)} onDone={() => { setGen(false); reload(); }} />}
       {pay && <PaymentDialog invoiceId={pay.id} number={pay.number} balance={pay.balance} onClose={() => setPay(null)} onSaved={(p) => router.push(`/billing/receipts/${p.id}`)} />}
     </div>
-  );
-}
-
-function GenerateDialog({ month, onClose, onDone }: { month: string; onClose: () => void; onDone: () => void }) {
-  const [extraLabel, setLabel] = useState('');
-  const [extraAmount, setAmount] = useState('');
-  const [result, setResult] = useState('');
-  const [error, setError] = useState('');
-  async function run() {
-    try {
-      const r = await post<{ created: number; skipped: number }>('/billing/generate', { month, extraLabel, extraAmount: Number(extraAmount) || 0 });
-      setResult(`${r.created} created, ${r.skipped} skipped`);
-    } catch (e) { setError((e as Error).message); }
-  }
-  return (
-    <Dialog title={`Generate invoices, ${monthLabel(month)}`} onClose={result ? onDone : onClose}
-      footer={result ? <button type="button" className="btn btn-pr" onClick={onDone}>Done</button> : <><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn btn-pr" onClick={run}>Generate</button></>}>
-      <div className="space-y-3 p-6">
-        <ErrorNote message={error} />
-        {result ? <p>{result}</p> : (
-          <>
-            <p className="text-mu">One invoice per guardian. Existing invoices for this month are kept.</p>
-            <Field label="Extra line (optional)"><input className="inp" value={extraLabel} maxLength={80} onChange={(e) => setLabel(e.target.value)} /></Field>
-            <Field label="Extra amount (RM)"><input className="inp" inputMode="decimal" value={extraAmount} onChange={(e) => setAmount(e.target.value)} /></Field>
-          </>
-        )}
-      </div>
-    </Dialog>
   );
 }

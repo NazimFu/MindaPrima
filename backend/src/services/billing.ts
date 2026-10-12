@@ -76,9 +76,14 @@ export async function getInvoice(ctx: AppContext, id: string): Promise<InvoiceDt
   return dto(await snap(ctx), id);
 }
 
-export async function billingRows(ctx: AppContext, month?: string): Promise<BillingDto> {
-  const s = await snap(ctx);
+/** Invoices for the current month are created when Billing is opened. Existing ones are kept; past months are never filled in. */
+export async function billingRows(ctx: AppContext, user: SessionUser, month?: string): Promise<BillingDto> {
+  let s = await snap(ctx);
   const m = month ?? s.currentMonth;
+  if (m === s.currentMonth) {
+    const missing = s.guardians.some((g) => activeStudents(s).some((k) => k.guardianId === g.id) && !invoiceFor(s, g.id, m));
+    if (missing) { await generateInvoices(ctx, user, { month: m, extraLabel: '', extraAmount: 0 }); s = await snap(ctx); }
+  }
   const rows = s.guardians.flatMap((g): BillingRow[] => {
     const kids = activeStudents(s).filter((x) => x.guardianId === g.id);
     if (kids.length === 0) return [];
