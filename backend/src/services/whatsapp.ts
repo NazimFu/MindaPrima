@@ -31,9 +31,18 @@ export const waState = (ctx: AppContext): WAState =>
 
 export function onWaState(fn: (s: WAState) => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
 
+/**
+ * whatsapp-web.js is CommonJS. Under tsx (dev) only `Client` is a named export and the rest (LocalAuth, MessageMedia, ...)
+ * sit on `.default`, so prefer `.default` when it exists. In the tsup build the exports are top-level.
+ */
+async function loadWwjs(): Promise<typeof import('whatsapp-web.js')> {
+  const mod = (await import('whatsapp-web.js')) as typeof import('whatsapp-web.js') & { default?: typeof import('whatsapp-web.js') };
+  return mod.default ?? mod;
+}
+
 export async function initWhatsApp(ctx: AppContext): Promise<void> {
   if (!ctx.config.WHATSAPP_ENABLED || client) return;
-  const { Client, LocalAuth } = await import('whatsapp-web.js');
+  const { Client, LocalAuth } = await loadWwjs();
   client = new Client({
     authStrategy: new LocalAuth({ dataPath: path.resolve(process.cwd(), ctx.config.WHATSAPP_SESSION_DIR) }),
     webVersionCache: { type: 'local' },
@@ -90,7 +99,7 @@ export async function sendInvoice(ctx: AppContext, user: SessionUser, invoiceId:
 
   const log = { id: newId(), at: new Date().toISOString(), to: inv.guardian.contact, invoiceId: inv.id };
   try {
-    const { MessageMedia } = await import('whatsapp-web.js');
+    const { MessageMedia } = await loadWwjs();
     const chatId = await resolveChat(inv.guardian.contact);
     const media = new MessageMedia('application/pdf', pdf.toString('base64'), `Invoice-${inv.number}.pdf`);
     try { await client.sendMessage(chatId, media, { caption }); }

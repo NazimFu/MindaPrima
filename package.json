@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c green,blue \"npm run dev -w @minda/backend\" \"npm run dev -w @minda/frontend\"",
     "build": "npm run build -w @minda/backend && npm run build -w @minda/frontend",
-    "start": "concurrently -n backend,frontend -c green,blue \"npm run start -w @minda/backend\" \"npm run start -w @minda/frontend\"",   
+    "start": "concurrently -n backend,frontend -c green,blue \"npm run start -w @minda/backend\" \"npm run start -w @minda/frontend\"",
     "typecheck": "npm run typecheck -w @minda/common && npm run typecheck -w @minda/backend && npm run typecheck -w @minda/frontend",
     "test": "npm run test -w @minda/common && npm run test -w @minda/backend",
     "setup:sheets": "npm run setup:sheets -w @minda/backend",
@@ -24,5 +24,12 @@
   },
   "dependencies": {
     "sharp": "^0.35.5"
+  },
+  "allowScripts": {
+    "puppeteer@24.39.1": true,
+    "sharp@0.34.5": true,
+    "sharp@0.35.5": true,
+    "esbuild@0.27.4": true,
+    "esbuild@0.21.5": true
   }
 }
