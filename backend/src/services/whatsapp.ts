@@ -18,6 +18,7 @@ export type WAStatus = 'disabled' | 'initialising' | 'qr_pending' | 'authenticat
 export interface WAState { status: WAStatus; qrDataUrl: string | null; info: string; phoneNumber: string | null }
 
 let client: WWJSClient | null = null;
+let watchdog: ReturnType<typeof setTimeout> | undefined;
 let state: WAState = { status: 'initialising', qrDataUrl: null, info: 'Not started', phoneNumber: null };
 const listeners = new Set<(s: WAState) => void>();
 
@@ -39,7 +40,12 @@ export async function initWhatsApp(ctx: AppContext): Promise<void> {
     webVersionCache: { type: 'local' },
     puppeteer: {
       waitForInitialPage: false,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      args: [
+        '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+        // Headless Chromium slows background pages down. WhatsApp Web loads in one, so keep it at full speed.
+        '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
     },
     authTimeoutMs: 60000,
     restartOnAuthFail: true,
@@ -48,12 +54,38 @@ export async function initWhatsApp(ctx: AppContext): Promise<void> {
     try { setState({ status: 'qr_pending', qrDataUrl: await qrcode.toDataURL(qr, { width: 300, margin: 2 }), info: 'Scan the QR code with WhatsApp on the phone.' }); }
     catch { setState({ status: 'qr_pending', qrDataUrl: null, info: 'QR received but could not be drawn.' }); }
   });
-  client.on('authenticated', () => setState({ status: 'authenticated', qrDataUrl: null, info: 'Authenticated, loading.' }));
-  client.on('ready', () => setState({ status: 'ready', qrDataUrl: null, info: 'Connected.', phoneNumber: client?.info?.wid?.user ?? null }));
+  client.on('authenticated', () => {
+    setState({ status: 'authenticated', qrDataUrl: null, info: 'Authenticated, loading.' });
+    clearTimeout(watchdog);
+    const t0 = Date.now();
+    const tick = () => {
+      if (state.status !== 'authenticated') return;
+      const s = Math.round((Date.now() - t0) / 1000);
+      if (s >= 300) {
+        setState({ status: 'error', info: 'Loading took too long. Reload this page to try again.' });
+        void client?.destroy().catch(() => undefined); client = null;
+        return;
+      }
+      if (s >= 60) setState({ info: `Still loading after ${s} seconds. The first link syncs your chats and can take a few minutes.` });
+      watchdog = setTimeout(tick, 15000);
+    };
+    watchdog = setTimeout(tick, 15000);
+  });
+  client.on('loading_screen', (percent: number | string, message: string) => {
+    if (state.status === 'authenticated' || state.status === 'initialising') setState({ info: `Loading ${percent}%${message ? `, ${message}` : ''}` });
+  });
+  client.on('ready', () => { clearTimeout(watchdog); setState({ status: 'ready', qrDataUrl: null, info: 'Connected.', phoneNumber: client?.info?.wid?.user ?? null }); });
   client.on('auth_failure', (m: string) => { setState({ status: 'error', qrDataUrl: null, info: `Authentication failed: ${m}` }); client = null; });
   client.on('disconnected', (r: string) => { setState({ status: 'disconnected', qrDataUrl: null, info: `Disconnected: ${r}`, phoneNumber: null }); client = null; });
   setState({ status: 'initialising', info: 'Starting WhatsApp.' });
-  await client.initialize();
+  try { await client.initialize(); }
+  catch (e) {
+    clearTimeout(watchdog);
+    setState({ status: 'error', qrDataUrl: null, info: `Could not start WhatsApp: ${(e as Error).message ?? e}`.slice(0, 200) });
+    void client?.destroy().catch(() => undefined);
+    client = null;
+    throw e;
+  }
 }
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
