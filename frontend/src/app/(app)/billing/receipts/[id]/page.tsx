@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { formatRM, type ReceiptDto } from '@minda/common';
 import { useApi } from '@/hooks/use-api';
 import { useCentre } from '@/hooks/use-centre';
-import { elementToPdf } from '@/lib/pdf';
+import { receiptPdf } from '@/lib/pdf-doc';
 import { DocSheet, DocTh, docTd } from '@/components/letterhead';
 import { ErrorNote, Loading } from '@/components/ui';
 
@@ -21,8 +21,8 @@ export default function ReceiptPage() {
   if (!r) return <ErrorNote message={error || 'Not found'} />;
 
   async function download() {
-    if (!sheet.current || !r) return;
-    try { (await elementToPdf(sheet.current)).save(`${r.payment.receiptNumber}.pdf`); } catch (e) { setErr((e as Error).message); }
+    if (!r) return;
+    try { (await receiptPdf(r, centre)).save(`${r.payment.receiptNumber}.pdf`); } catch (e) { setErr((e as Error).message); }
   }
   const state = r.balance <= 0 ? 'Paid' : 'Part paid';
   return (
