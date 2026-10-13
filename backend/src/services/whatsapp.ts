@@ -85,7 +85,13 @@ export async function initWhatsApp(ctx: AppContext): Promise<void> {
   });
   client.on('ready', () => { clearTimeout(watchdog); setState({ status: 'ready', qrDataUrl: null, info: 'Connected.', phoneNumber: client?.info?.wid?.user ?? null }); });
   client.on('auth_failure', (m: string) => { setState({ status: 'error', qrDataUrl: null, info: `Authentication failed: ${m}` }); client = null; });
-  client.on('disconnected', (r: string) => { setState({ status: 'disconnected', qrDataUrl: null, info: `Disconnected: ${r}`, phoneNumber: null }); client = null; });
+  client.on('disconnected', (r: string) => {
+    setState({ status: 'disconnected', qrDataUrl: null, info: `Disconnected: ${r}`, phoneNumber: null });
+    // Close Chrome so it releases the session folder. On Windows the library's own cleanup fails with EBUSY while Chrome holds it.
+    const old = client;
+    client = null;
+    old?.destroy().catch(() => undefined);
+  });
   setState({ status: 'initialising', info: 'Starting WhatsApp.' });
   try { await client.initialize(); }
   catch (e) {
